@@ -10800,9 +10800,13 @@ var _user$project$Main$showTile = F3(
 			_elm_lang$core$List$member,
 			{ctor: '_Tuple2', _0: x, _1: y},
 			model.clicked);
-		var border = isClicked ? 'inset 3px gold' : 'solid 1px black';
-		var width = isClicked ? '70px' : '75px';
-		var height = isClicked ? '95px' : '100px';
+		var isHoverAt = _elm_lang$core$Native_Utils.eq(
+			model.hoverAt,
+			_elm_lang$core$Maybe$Just(
+				{ctor: '_Tuple2', _0: x, _1: y}));
+		var border = isClicked ? 'inset 3px gold' : (isHoverAt ? 'inset 3px blue' : 'solid 1px black');
+		var width = (isClicked || isHoverAt) ? '70px' : '75px';
+		var height = (isClicked || isHoverAt) ? '95px' : '100px';
 		return (_elm_lang$core$Native_Utils.cmp(t, 0) < 0) ? _elm_lang$core$Native_List.fromArray(
 			[]) : _elm_lang$core$Native_List.fromArray(
 			[
