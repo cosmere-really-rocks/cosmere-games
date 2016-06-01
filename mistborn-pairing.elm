@@ -27,18 +27,27 @@ type alias Tiles = Array.Array Int
 type alias Model = { rows : Int
                    , cols : Int
                    , tiles : Tiles
+                   , hoverAt : Maybe (Int, Int)
                    , clicked : List (Int, Int)
                    , path : List (Int, Int)
                    }
 
 type Msg = GenerateBoard (List Int)
+         | MouseEnter Int Int
+         | MouseLeave Int Int
          | ClickOn Int Int
          | Paired (List (Int, Int))
 
 init : (Model, Cmd Msg)
 init = let r = 6
            c = 12
-       in ( { rows = r, cols = c, tiles = Array.empty, clicked = [], path = [] }
+       in ( { rows = r
+            , cols = c
+            , tiles = Array.empty
+            , hoverAt = Nothing
+            , clicked = []
+            , path = []
+            }
           , Rand.generate GenerateBoard
               <| Rand.map (fst
                            << (Random.step
@@ -54,6 +63,13 @@ update msg model =
     case msg of
         GenerateBoard tiles ->
             ( { model | tiles = convertBoard model tiles }, Cmd.none )
+        MouseEnter x y ->
+            ( { model | hoverAt = Just ( x, y ) }, Cmd.none )
+        MouseLeave x y ->
+            let coord = if model.hoverAt == Just ( x, y )
+                        then Nothing
+                        else model.hoverAt
+            in ( { model | hoverAt = coord }, Cmd.none )
         ClickOn x y ->
             let setClicked m = { m | clicked = [ ( x, y ) ] }
             in case model.clicked of
@@ -104,15 +120,13 @@ view model =
         , h2 [ Html.style [ ( "color", "blue" )
                           , ( "text-align", "center" )
                    ]
-             ]
-              [ Html.text
-                  <| Maybe.withDefault ""
-                  <| Maybe.oneOf
-                  <| List.map (flip Array.get symbolIntro
-                               << getTile model
-                               << uncurry (indexOf model))
-                  <| model.clicked
-                ]
+             ] [ Html.text
+                 <| Maybe.withDefault ""
+                 <| flip Array.get symbolIntro
+                 <| getTile model
+                 <| uncurry (indexOf model)
+                 <| Maybe.withDefault ( 0, 0 ) model.hoverAt
+               ]
         , div [ Html.style <| styles ++ [ ( "z-index", "10" )
                                         , ( "background",  "rgba(0,0,0,0)" )
                                         ]
@@ -188,6 +202,8 @@ showTile model i t =
                                , ( "background", "white" )
                                ]
                   , onClick <| ClickOn x y
+                  , onMouseEnter <| MouseEnter x y
+                  , onMouseLeave <| MouseLeave x y
                   ] []
             ]
 
