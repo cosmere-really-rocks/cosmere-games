@@ -184,11 +184,14 @@ showTile : Model -> Int -> Int -> List (Html Msg)
 showTile model i t =
     let ( x, y ) = coordOf model i
         isClicked = List.member ( x, y ) model.clicked
+        isHoverAt = model.hoverAt == Just ( x, y )
         border = if isClicked
                  then "inset 3px gold"
-                 else "solid 1px black"
-        width = if isClicked then "70px" else "75px"
-        height = if isClicked then "95px" else "100px"
+                 else if isHoverAt
+                      then "inset 3px blue"
+                      else "solid 1px black"
+        width = if isClicked || isHoverAt then "70px" else "75px"
+        height = if isClicked || isHoverAt then "95px" else "100px"
     in if t < 0
        then []
        else [ img [ src (toString t ++ ".svg")
