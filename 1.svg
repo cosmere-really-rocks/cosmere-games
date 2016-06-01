@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   version="1.0"
+   width="1000"
+   height="1000"
+   viewBox="0 0 800 800"
+   id="svg3316">
+  <defs
+     id="defs3328" />
+  <metadata
+     id="metadata3318">
+Created by potrace 1.9, written by Peter Selinger 2001-2010
+<rdf:RDF>
+  <cc:Work
+     rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type
+       rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+    <dc:title></dc:title>
+  </cc:Work>
+</rdf:RDF>
+</metadata>
+  <g
+     transform="matrix(1.7782861,0,0,1.7768249,-17.43421,-19.228675)"
+     id="g4671">
+    <path
+       d="M 459.6753,162.32055 30.15174,147.9846 9.80394,136.8858 l 0.27747,52.7193 18.12804,-10.91382 z"
+       id="path4629"
+       style="fill:#000000;fill-opacity:1;stroke:none" />
+    <path
+       d="m 226.87797,30.98475 10.82133,-20.16282 -52.7193,0.73992 10.91382,17.5731 16.37073,431.9283 z"
+       id="path4625"
+       style="fill:#000000;fill-opacity:1;stroke:none" />
+    <path
+       d="m 273.90625,76.46875 c -115.87734,0 -209.8125,94.88726 -209.8125,211.90625 0,117.01899 93.93516,211.875 209.8125,211.875 77.70006,0 145.51683,-42.64696 181.78125,-106.03125 -32.13609,35.16472 -79.81247,57.4375 -133.03125,57.4375 -96.77334,0 -175.21875,-73.63382 -175.21875,-164.5 0,-90.86618 78.44541,-164.53125 175.21875,-164.53125 15.1818,0 29.89278,1.84074 43.9375,5.25 l 16.59375,-20.40625 c -31.82428,-19.659906 -69.24066,-31 -109.28125,-31 z"
+       transform="scale(0.8,0.8)"
+       id="path4645"
+       style="fill:#000000;fill-opacity:1;stroke:none" />
+    <path
+       d="m 427.89754,319.3728 a 33.074203,33.074203 0 1 1 -66.14841,0 33.074203,33.074203 0 1 1 66.14841,0 z"
+       transform="scale(0.8,0.8)"
+       id="path4669"
+       style="fill:#000000;fill-opacity:1;stroke:none" />
+  </g>
+</svg>
