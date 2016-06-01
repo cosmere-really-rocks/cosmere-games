@@ -10401,9 +10401,9 @@ var _user$project$Main$generateBoard = function (halfTiles) {
 var _user$project$Main$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$none;
 };
-var _user$project$Main$Model = F5(
-	function (a, b, c, d, e) {
-		return {rows: a, cols: b, tiles: c, clicked: d, path: e};
+var _user$project$Main$Model = F6(
+	function (a, b, c, d, e, f) {
+		return {rows: a, cols: b, tiles: c, hoverAt: d, clicked: e, path: f};
 	});
 var _user$project$Main$Paired = function (a) {
 	return {ctor: 'Paired', _0: a};
@@ -10667,6 +10667,29 @@ var _user$project$Main$update = F2(
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
+			case 'MouseEnter':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							hoverAt: _elm_lang$core$Maybe$Just(
+								{ctor: '_Tuple2', _0: _p16._0, _1: _p16._1})
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'MouseLeave':
+				var coord = _elm_lang$core$Native_Utils.eq(
+					model.hoverAt,
+					_elm_lang$core$Maybe$Just(
+						{ctor: '_Tuple2', _0: _p16._0, _1: _p16._1})) ? _elm_lang$core$Maybe$Nothing : model.hoverAt;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{hoverAt: coord}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
 			case 'ClickOn':
 				var _p21 = _p16._1;
 				var _p20 = _p16._0;
@@ -10760,6 +10783,14 @@ var _user$project$Main$ClickOn = F2(
 	function (a, b) {
 		return {ctor: 'ClickOn', _0: a, _1: b};
 	});
+var _user$project$Main$MouseLeave = F2(
+	function (a, b) {
+		return {ctor: 'MouseLeave', _0: a, _1: b};
+	});
+var _user$project$Main$MouseEnter = F2(
+	function (a, b) {
+		return {ctor: 'MouseEnter', _0: a, _1: b};
+	});
 var _user$project$Main$showTile = F3(
 	function (model, i, t) {
 		var _p22 = A2(_user$project$Main$coordOf, model, i);
@@ -10811,7 +10842,11 @@ var _user$project$Main$showTile = F3(
 								{ctor: '_Tuple2', _0: 'background', _1: 'white'}
 							])),
 						_elm_lang$html$Html_Events$onClick(
-						A2(_user$project$Main$ClickOn, x, y))
+						A2(_user$project$Main$ClickOn, x, y)),
+						_elm_lang$html$Html_Events$onMouseEnter(
+						A2(_user$project$Main$MouseEnter, x, y)),
+						_elm_lang$html$Html_Events$onMouseLeave(
+						A2(_user$project$Main$MouseLeave, x, y))
 					]),
 				_elm_lang$core$Native_List.fromArray(
 					[]))
@@ -10877,23 +10912,20 @@ var _user$project$Main$view = function (model) {
 						A2(
 							_elm_lang$core$Maybe$withDefault,
 							'',
-							_elm_lang$core$Maybe$oneOf(
+							A3(
+								_elm_lang$core$Basics$flip,
+								_elm_lang$core$Array$get,
+								_user$project$Main$symbolIntro,
 								A2(
-									_elm_lang$core$List$map,
-									function (_p23) {
-										return A3(
-											_elm_lang$core$Basics$flip,
-											_elm_lang$core$Array$get,
-											_user$project$Main$symbolIntro,
-											A2(
-												_user$project$Main$getTile,
-												model,
-												A2(
-													_elm_lang$core$Basics$uncurry,
-													_user$project$Main$indexOf(model),
-													_p23)));
-									},
-									model.clicked))))
+									_user$project$Main$getTile,
+									model,
+									A2(
+										_elm_lang$core$Basics$uncurry,
+										_user$project$Main$indexOf(model),
+										A2(
+											_elm_lang$core$Maybe$withDefault,
+											{ctor: '_Tuple2', _0: 0, _1: 0},
+											model.hoverAt))))))
 					])),
 				A2(
 				_elm_lang$html$Html$div,
@@ -10944,6 +10976,7 @@ var _user$project$Main$init = function () {
 			rows: r,
 			cols: c,
 			tiles: _elm_lang$core$Array$empty,
+			hoverAt: _elm_lang$core$Maybe$Nothing,
 			clicked: _elm_lang$core$Native_List.fromArray(
 				[]),
 			path: _elm_lang$core$Native_List.fromArray(
@@ -10954,7 +10987,7 @@ var _user$project$Main$init = function () {
 			_user$project$Main$GenerateBoard,
 			A2(
 				_elm_lang$core$Random$map,
-				function (_p24) {
+				function (_p23) {
 					return _elm_lang$core$Basics$fst(
 						_mgold$elm_random_pcg$Random_Pcg$step(
 							A2(
@@ -10964,7 +10997,7 @@ var _user$project$Main$init = function () {
 									((r * c) / 2) | 0,
 									A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, 15)),
 								_user$project$Main$generateBoard))(
-							_mgold$elm_random_pcg$Random_Pcg$initialSeed(_p24)));
+							_mgold$elm_random_pcg$Random_Pcg$initialSeed(_p23)));
 				},
 				A2(_elm_lang$core$Random$int, _elm_lang$core$Random$minInt, _elm_lang$core$Random$maxInt)))
 	};
