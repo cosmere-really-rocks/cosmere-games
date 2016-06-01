@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   version="1.0"
+   width="824.42126"
+   height="1000"
+   viewBox="0 0 659.53701 800"
+   id="svg3879">
+  <defs
+     id="defs3891" />
+  <metadata
+     id="metadata3881">
+Created by potrace 1.9, written by Peter Selinger 2001-2010
+<rdf:RDF>
+  <cc:Work
+     rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type
+       rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+    <dc:title></dc:title>
+  </cc:Work>
+</rdf:RDF>
+</metadata>
+  <g
+     transform="matrix(1.4165314,0,0,1.4165314,1.1332251,2.618496)"
+     id="g4471"
+     style="fill:#000000;fill-opacity:1">
+    <path
+       d="m 435,278.75 a 41,41 0 1 1 -82,0 41,41 0 1 1 82,0 z"
+       transform="matrix(0.8,0,0,0.8,1.6,3.2)"
+       id="path4404"
+       style="fill:#000000;fill-opacity:1;stroke:none" />
+    <path
+       d="m 301.78125,15 c 120.79933,15.810957 214.0625,119.1376 214.0625,244.25 0,136.05441 -110.28934,246.34375 -246.34375,246.34375 C 133.44559,505.59375 23.15625,395.30441 23.15625,259.25 23.15625,206.79054 39.551048,158.17283 67.5,118.21875 24.765357,168.86787 -1,234.29282 -1,305.75 c 0,160.71486 130.28514,291 291,291 160.71486,0 291,-130.28514 291,-291 C 581,148.9857 457.02747,21.188831 301.78125,15 z"
+       transform="scale(0.8,0.8)"
+       id="path4408"
+       style="fill:#000000;fill-opacity:1;stroke:none" />
+    <g
+       id="g4468"
+       style="fill:#000000;fill-opacity:1">
+      <path
+         d="m 244.93934,703.63909 117,-5.47488 L 345,678.75 31.292893,-2.3106602 275,679.75 z"
+         transform="scale(0.8,0.8)"
+         id="path4411"
+         style="fill:#000000;fill-opacity:1;stroke:none" />
+    </g>
+    <path
+       d="m 405,655.75 15.17157,19.52513 114.94975,-92.17158 -46.76777,18.12132 L 148,135 425,642.75 z"
+       transform="scale(0.8,0.8)"
+       id="path4413"
+       style="fill:#000000;fill-opacity:1;stroke:none" />
+  </g>
+</svg>
