@@ -94,7 +94,13 @@ view model =
                  , ( "position", "absolute" )
                  ]
     in div [ Html.style styles ]
-        [ Html.a [ Html.href "index.html" ] [ Html.text "<- 回到列表" ]
+        [ Html.a [ Html.href "index.html"
+                 , Html.style [ ( "z-index", "100" )
+                              , ( "top", "0" )
+                              , ( "left", "0" )
+                              , ( "position", "absolute" )
+                              ]
+                 ] [ Html.text "<- 回到列表" ]
         , h2 [ Html.style [ ( "color", "blue" )
                           , ( "text-align", "center" )
                    ]
