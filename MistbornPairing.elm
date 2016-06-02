@@ -1,3 +1,5 @@
+module MistbornPairing exposing ( main, init, update, view )
+
 import Array
 import Debug
 import Dict
@@ -23,11 +25,11 @@ import Time
 import MistbornPairingI18n as I18n
 
 main = Html.program { init = init
-                          , view = view
-                          , update = update
-           --               , urlUpdate = urlUpdate
-                          , subscriptions = subscriptions
-                          }
+                    , view = view
+                    , update = update
+                    --               , urlUpdate = urlUpdate
+                    , subscriptions = subscriptions
+                    }
 
 type alias Tile = Int
 type alias TilePos = (Int, Int)
