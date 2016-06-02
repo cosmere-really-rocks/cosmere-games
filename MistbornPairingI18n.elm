@@ -46,8 +46,8 @@ update msg model =
                , Task.perform msg msg <| Process.sleep <| 5 * Time.second
                )
                 
-view : Model -> Maybe Int -> Html Msg
-view model symbol =
+view : Model -> Html Msg
+view model =
     let padding = style [ ( "padding", "0 20px" ) ]
     in div [ style [ ( "width", "100%" ) ]
            ] [ a [ href "index.html"
@@ -61,14 +61,6 @@ view model symbol =
                  , padding
                  , onClick <| Fetch "zh"
                  ] [ text <| "中文" ]
-             , h2 [ style [ ( "color", "blue" )
-                          , ( "text-align", "center" )
-                          ]
-                  ] [ text
-                      <| Maybe.withDefault ""
-                      <| flip Array.get model.translations.symbolIntro
-                      <| Maybe.withDefault -1 symbol
-                    ]
              ]
 
 fetch : String -> Cmd Msg

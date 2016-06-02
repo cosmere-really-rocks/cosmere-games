@@ -102,15 +102,20 @@ update msg model =
                                else
                                    checkPairing pos pos'
                                    <| { model | clicked = [ pos, pos' ] }
-                   _ ->
-                       ( resetTiles model.clicked
-                             <| setClicked { model | path = [] }
+                   _ -> ( setClicked
+                              { model
+                                  | path = []
+                                  , tiles = resetTiles model.tiles model.clicked
+                              }
                        , Cmd.none
                        )
         Paired clicked ->
             ( if model.clicked /= clicked
               then model
-              else resetTiles model.clicked { model | clicked = [] }
+              else { model
+                       | clicked = []
+                       , tiles = resetTiles model.tiles model.clicked
+                   }
             , Cmd.none
             )
         ChangeTheme theme ->
@@ -138,13 +143,19 @@ view model =
                            , ( "width", "100%" )
                            ]
               ]
-              [ Html.map OnI18n
-                  <| I18n.view model.i18n
-                  <| Maybe.map (getTile model)
-                  <| model.hoverAt
+              [ Html.map OnI18n <| I18n.view model.i18n
               , div [ Html.style [ ( "width", "100%" ) ] ]
                   <| List.concat
                   <| List.indexedMap (themePicker model) themes
+              , h3 [ Html.style [ ( "color", "blue" )
+                                , ( "text-align", "center" )
+                                ]
+                   ] [ Html.text
+                       <| Maybe.withDefault ""
+                       <| model.hoverAt `Maybe.andThen`
+                           (flip Array.get model.i18n.translations.symbolIntro
+                            << getTile model)
+                     ]
               ]
         , div [ Html.style <| styles ++ [ ( "z-index", "10" )
                                         , ( "background",  "rgba(0,0,0,0)" )
@@ -251,9 +262,9 @@ checkPairing pos pos' model =
     case checkPairing' model pos pos' of
         Just path ->
             let msg = always <| Paired model.clicked
-                newBoard = .tiles <| resetTiles model.clicked model
+                newBoard = resetTiles model.tiles model.clicked
             -- in flip update model <| msg ()
-            in if hasPairs model newBoard
+            in if Dict.isEmpty newBoard || hasPairs model newBoard
                then ( { model | path = path }
                     , Task.perform msg msg
                         <| Process.sleep
@@ -344,10 +355,8 @@ checkPairing' model pos pos' =
 getTile : Model -> TilePos -> Tile
 getTile model = Maybe.withDefault -1 << flip Dict.get model.tiles
 
-resetTiles : List TilePos -> Model -> Model
-resetTiles coords model =
-    let newBoard = List.foldl (flip Dict.insert -1) model.tiles coords
-    in { model | tiles = newBoard }
+resetTiles : Tiles -> List TilePos -> Tiles
+resetTiles = List.foldl Dict.remove
 
 symbols : Int
 symbols = 16
@@ -355,7 +364,8 @@ symbols = 16
 themePicker : Model -> Int -> (String, String) -> List (Html Msg)
 themePicker model n theme =
     let link = Html.a [ Html.href "javascript:void()"
-                      , Html.style [ ( "padding", "0 20px" ) ]
+                      , Html.style [ ( "padding", "0 20px" )
+                                   , ( "text-align", "center" ) ]
                       , onClick <| ChangeTheme theme
                       ] [ Html.text
                           <| Maybe.withDefault ""
