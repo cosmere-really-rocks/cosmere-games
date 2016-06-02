@@ -16,21 +16,25 @@ import Platform.Cmd as Platform
 import Process
 import Random as Rand
 import Random.Pcg as Random
+import Result
 import String
 import Svg exposing (..)
 import Svg.Attributes as Svg exposing (..)
 import Task
 import Time
+import UrlParser exposing ((</>))
 
 import MistbornPairingI18n as I18n
 
-main = Html.program { init = init
-                    , view = view
-                    , update = update
-                    --               , urlUpdate = urlUpdate
-                    , subscriptions = subscriptions
-                    }
+main = Navigation.program urlParser { init = init
+                                    , view = view
+                                    , update = update
+                                    , urlUpdate = urlUpdate
+                                    , subscriptions = subscriptions
+                                    }
 
+type alias Params = { lang : String, theme : String }
+       
 type alias Tile = Int
 type alias TilePos = (Int, Int)
 type alias Tiles = Dict.Dict TilePos Tile
@@ -50,29 +54,32 @@ type Msg = GenerateBoard (List Tile)
          | MouseLeave TilePos
          | ClickOn TilePos
          | Paired (List TilePos)
-         | ChangeTheme (String, String)
+         | ChangeTheme String
          | OnI18n I18n.Msg
 
-init : (Model, Cmd Msg)
-init = let r = 6
-           c = 12
-           ( model', cmd' ) = I18n.init "zh"
-       in ( { rows = r
-            , cols = c
-            , tiles = Dict.empty
-            , hoverAt = Nothing
-            , clicked = []
-            , path = []
-            , theme = Maybe.withDefault ( "", "" ) <| List.head themes
-            , i18n = model'
-            }
-          , Platform.batch [ runGenerator GenerateBoard
-                             <| (Random.list (r * c // 2)
-                                 <| Random.int 0 <| symbols - 1)
-                                 `Random.andThen` generateBoard
-                           , Platform.map OnI18n cmd'
-                           ]
-          )
+urlParser : Navigation.Parser Params
+urlParser = Navigation.makeParser fromUrl
+
+init : Params -> (Model, Cmd Msg)
+init params = let r = 6
+                  c = 12
+                  ( model', cmd' ) = I18n.init params.lang
+              in ( { rows = r
+                   , cols = c
+                   , tiles = Dict.empty
+                   , hoverAt = Nothing
+                   , clicked = []
+                   , path = []
+                   , theme = findTheme params.theme
+                   , i18n = model'
+                   }
+                 , Platform.batch [ runGenerator GenerateBoard
+                                        <| (Random.list (r * c // 2)
+                                            <| Random.int 0 <| symbols - 1)
+                                            `Random.andThen` generateBoard
+                                  , Platform.map OnI18n cmd'
+                                  ]
+                 )
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -121,11 +128,30 @@ update msg model =
             , Cmd.none
             )
         ChangeTheme theme ->
-            ( { model | theme = theme }, Cmd.none )
+            ( { model | theme = findTheme theme }
+            , Navigation.newUrl <| toUrl <| Params model.i18n.lang theme
+            )
         OnI18n i18n ->
             let ( m, c ) = I18n.update i18n model.i18n
-            in ( { model | i18n = m }, Platform.map OnI18n c )
+            in ( { model | i18n = m }
+               , Platform.batch [ Platform.map OnI18n c
+                                , Navigation.newUrl
+                                    <| toUrl
+                                    <| Params m.lang
+                                    <| fst model.theme
+                                ]
+               )
 
+urlUpdate : Params -> Model -> (Model, Cmd Msg)
+urlUpdate params model =
+    let ( m, c ) = if params.theme == fst model.theme
+                   then ( model, Cmd.none )
+                   else update (ChangeTheme params.theme) model
+        ( m', c' ) = if params.lang == model.i18n.lang
+                     then ( model.i18n, Cmd.none )
+                     else I18n.update (I18n.Fetch params.lang) model.i18n
+    in ( { m | i18n = m' }, Platform.batch [ c, Platform.map OnI18n c' ] )
+          
 subscriptions : Model -> Sub Msg
 subscriptions model = Sub.none
 
@@ -364,14 +390,14 @@ symbols : Int
 symbols = 16
 
 themePicker : Model -> Int -> (String, String) -> List (Html Msg)
-themePicker model n theme =
+themePicker model n ( theme, _ ) =
     let link = Html.a [ Html.href "javascript:void()"
                       , Html.style [ ( "padding", "0 20px" )
                                    , ( "text-align", "center" ) ]
-                      , onClick <| ChangeTheme theme
+                      , onClick <| ChangeTheme <| theme
                       ] [ Html.text
                           <| Maybe.withDefault ""
-                          <| Dict.get (fst theme)
+                          <| Dict.get theme
                           <| model.i18n.translations.themes
                         ]
     in if n == 0
@@ -382,3 +408,25 @@ themes : List (String, String)
 themes = [ ( "plain", "svg" )
          , ( "lien", "jpg" )
          ]
+
+findTheme : String -> (String, String)
+findTheme theme = Maybe.withDefault ( "", "" )
+                  <| Maybe.oneOf [ List.find ((==) theme << fst) themes
+                                 , List.head themes
+                                 ]
+                      
+toUrl : Params -> String
+toUrl params =
+  "#/lang/" ++ params.lang ++ "/theme/" ++ params.theme
+
+langParser : UrlParser.Parser (String -> a) a
+langParser = UrlParser.s "lang" </> UrlParser.string
+
+themeParser : UrlParser.Parser (String -> a) a
+themeParser = UrlParser.s "theme" </> UrlParser.string
+      
+fromUrl : Navigation.Location -> Params
+fromUrl = Result.withDefault { lang = "zh", theme = "plain" }
+          << UrlParser.parse Params (langParser </> themeParser)
+          << String.dropLeft 2
+          << .hash

@@ -1,4 +1,4 @@
-module MistbornPairingI18n exposing ( Model, Msg, init, update, view )
+module MistbornPairingI18n exposing ( Model, Msg(..), init, update, view )
 
 import Array
 import Dict
@@ -37,7 +37,7 @@ init lang = ( { lang = lang
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
-        Fetch lang -> ( model, fetch lang )
+        Fetch lang -> ( { model | lang = lang }, fetch lang )
         FetchSucceed translations ->
             ( { model | translations = translations }, Cmd.none )
         FetchFail lang err ->
