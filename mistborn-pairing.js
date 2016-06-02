@@ -10327,6 +10327,184 @@ var _evancz$elm_http$Http$post = F3(
 			A2(_evancz$elm_http$Http$send, _evancz$elm_http$Http$defaultSettings, request));
 	});
 
+var _evancz$url_parser$UrlParser$oneOfHelp = F3(
+	function (choices, chunks, formatter) {
+		oneOfHelp:
+		while (true) {
+			var _p0 = choices;
+			if (_p0.ctor === '[]') {
+				return _elm_lang$core$Result$Err('Tried many parsers, but none of them worked!');
+			} else {
+				var _p1 = A2(_p0._0._0, chunks, formatter);
+				if (_p1.ctor === 'Err') {
+					var _v2 = _p0._1,
+						_v3 = chunks,
+						_v4 = formatter;
+					choices = _v2;
+					chunks = _v3;
+					formatter = _v4;
+					continue oneOfHelp;
+				} else {
+					return _elm_lang$core$Result$Ok(_p1._0);
+				}
+			}
+		}
+	});
+var _evancz$url_parser$UrlParser$Chunks = F2(
+	function (a, b) {
+		return {seen: a, rest: b};
+	});
+var _evancz$url_parser$UrlParser$parse = F3(
+	function (input, _p2, url) {
+		var _p3 = _p2;
+		var _p4 = A2(
+			_p3._0,
+			A2(
+				_evancz$url_parser$UrlParser$Chunks,
+				_elm_lang$core$Native_List.fromArray(
+					[]),
+				A2(_elm_lang$core$String$split, '/', url)),
+			input);
+		if (_p4.ctor === 'Err') {
+			return _elm_lang$core$Result$Err(_p4._0);
+		} else {
+			var _p7 = _p4._0._1;
+			var _p6 = _p4._0._0.rest;
+			var _p5 = _p6;
+			if (_p5.ctor === '[]') {
+				return _elm_lang$core$Result$Ok(_p7);
+			} else {
+				if ((_p5._0 === '') && (_p5._1.ctor === '[]')) {
+					return _elm_lang$core$Result$Ok(_p7);
+				} else {
+					return _elm_lang$core$Result$Err(
+						A2(
+							_elm_lang$core$Basics_ops['++'],
+							'The parser worked, but /',
+							A2(
+								_elm_lang$core$Basics_ops['++'],
+								A2(_elm_lang$core$String$join, '/', _p6),
+								' was left over.')));
+				}
+			}
+		}
+	});
+var _evancz$url_parser$UrlParser$Parser = function (a) {
+	return {ctor: 'Parser', _0: a};
+};
+var _evancz$url_parser$UrlParser$s = function (str) {
+	return _evancz$url_parser$UrlParser$Parser(
+		F2(
+			function (_p8, result) {
+				var _p9 = _p8;
+				var _p12 = _p9.rest;
+				var _p10 = _p12;
+				if (_p10.ctor === '[]') {
+					return _elm_lang$core$Result$Err(
+						A2(_elm_lang$core$Basics_ops['++'], 'Got to the end of the URL but wanted /', str));
+				} else {
+					var _p11 = _p10._0;
+					return _elm_lang$core$Native_Utils.eq(_p11, str) ? _elm_lang$core$Result$Ok(
+						{
+							ctor: '_Tuple2',
+							_0: A2(
+								_evancz$url_parser$UrlParser$Chunks,
+								A2(_elm_lang$core$List_ops['::'], _p11, _p9.seen),
+								_p10._1),
+							_1: result
+						}) : _elm_lang$core$Result$Err(
+						A2(
+							_elm_lang$core$Basics_ops['++'],
+							'Wanted /',
+							A2(
+								_elm_lang$core$Basics_ops['++'],
+								str,
+								A2(
+									_elm_lang$core$Basics_ops['++'],
+									' but got /',
+									A2(_elm_lang$core$String$join, '/', _p12)))));
+				}
+			}));
+};
+var _evancz$url_parser$UrlParser$custom = F2(
+	function (tipe, stringToSomething) {
+		return _evancz$url_parser$UrlParser$Parser(
+			F2(
+				function (_p13, func) {
+					var _p14 = _p13;
+					var _p15 = _p14.rest;
+					if (_p15.ctor === '[]') {
+						return _elm_lang$core$Result$Err(
+							A2(_elm_lang$core$Basics_ops['++'], 'Got to the end of the URL but wanted /', tipe));
+					} else {
+						var _p17 = _p15._0;
+						var _p16 = stringToSomething(_p17);
+						if (_p16.ctor === 'Ok') {
+							return _elm_lang$core$Result$Ok(
+								{
+									ctor: '_Tuple2',
+									_0: A2(
+										_evancz$url_parser$UrlParser$Chunks,
+										A2(_elm_lang$core$List_ops['::'], _p17, _p14.seen),
+										_p15._1),
+									_1: func(_p16._0)
+								});
+						} else {
+							return _elm_lang$core$Result$Err(
+								A2(
+									_elm_lang$core$Basics_ops['++'],
+									'Parsing `',
+									A2(
+										_elm_lang$core$Basics_ops['++'],
+										_p17,
+										A2(_elm_lang$core$Basics_ops['++'], '` went wrong: ', _p16._0))));
+						}
+					}
+				}));
+	});
+var _evancz$url_parser$UrlParser$string = A2(_evancz$url_parser$UrlParser$custom, 'STRING', _elm_lang$core$Result$Ok);
+var _evancz$url_parser$UrlParser$int = A2(_evancz$url_parser$UrlParser$custom, 'NUMBER', _elm_lang$core$String$toInt);
+var _evancz$url_parser$UrlParser_ops = _evancz$url_parser$UrlParser_ops || {};
+_evancz$url_parser$UrlParser_ops['</>'] = F2(
+	function (_p19, _p18) {
+		var _p20 = _p19;
+		var _p21 = _p18;
+		return _evancz$url_parser$UrlParser$Parser(
+			F2(
+				function (chunks, func) {
+					return A2(
+						_elm_lang$core$Result$andThen,
+						A2(_p20._0, chunks, func),
+						function (_p22) {
+							var _p23 = _p22;
+							return A2(_p21._0, _p23._0, _p23._1);
+						});
+				}));
+	});
+var _evancz$url_parser$UrlParser$oneOf = function (choices) {
+	return _evancz$url_parser$UrlParser$Parser(
+		_evancz$url_parser$UrlParser$oneOfHelp(choices));
+};
+var _evancz$url_parser$UrlParser$format = F2(
+	function (input, _p24) {
+		var _p25 = _p24;
+		return _evancz$url_parser$UrlParser$Parser(
+			F2(
+				function (chunks, func) {
+					var _p26 = A2(_p25._0, chunks, input);
+					if (_p26.ctor === 'Err') {
+						return _elm_lang$core$Result$Err(_p26._0);
+					} else {
+						return _elm_lang$core$Result$Ok(
+							{
+								ctor: '_Tuple2',
+								_0: _p26._0._0,
+								_1: func(_p26._0._1)
+							});
+					}
+				}));
+	});
+
 var _mgold$elm_random_pcg$Random_Pcg$toJson = function (_p0) {
 	var _p1 = _p0;
 	return _elm_lang$core$Json_Encode$list(
@@ -11090,10 +11268,13 @@ var _user$project$MistbornPairingI18n$update = F2(
 		var _p0 = msg;
 		switch (_p0.ctor) {
 			case 'Fetch':
+				var _p1 = _p0._0;
 				return {
 					ctor: '_Tuple2',
-					_0: model,
-					_1: _user$project$MistbornPairingI18n$fetch(_p0._0)
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{lang: _p1}),
+					_1: _user$project$MistbornPairingI18n$fetch(_p1)
 				};
 			case 'FetchSucceed':
 				return {
@@ -11176,19 +11357,58 @@ var _user$project$MistbornPairingI18n$view = function (model) {
 			]));
 };
 
+var _user$project$MistbornPairing$themeParser = A2(
+	_evancz$url_parser$UrlParser_ops['</>'],
+	_evancz$url_parser$UrlParser$s('theme'),
+	_evancz$url_parser$UrlParser$string);
+var _user$project$MistbornPairing$langParser = A2(
+	_evancz$url_parser$UrlParser_ops['</>'],
+	_evancz$url_parser$UrlParser$s('lang'),
+	_evancz$url_parser$UrlParser$string);
+var _user$project$MistbornPairing$toUrl = function (params) {
+	return A2(
+		_elm_lang$core$Basics_ops['++'],
+		'#/lang/',
+		A2(
+			_elm_lang$core$Basics_ops['++'],
+			params.lang,
+			A2(_elm_lang$core$Basics_ops['++'], '/theme/', params.theme)));
+};
 var _user$project$MistbornPairing$themes = _elm_lang$core$Native_List.fromArray(
 	[
 		{ctor: '_Tuple2', _0: 'plain', _1: 'svg'},
 		{ctor: '_Tuple2', _0: 'lien', _1: 'jpg'}
 	]);
+var _user$project$MistbornPairing$findTheme = function (theme) {
+	return A2(
+		_elm_lang$core$Maybe$withDefault,
+		{ctor: '_Tuple2', _0: '', _1: ''},
+		_elm_lang$core$Maybe$oneOf(
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A2(
+					_elm_community$list_extra$List_Extra$find,
+					function (_p0) {
+						return A2(
+							F2(
+								function (x, y) {
+									return _elm_lang$core$Native_Utils.eq(x, y);
+								}),
+							theme,
+							_elm_lang$core$Basics$fst(_p0));
+					},
+					_user$project$MistbornPairing$themes),
+					_elm_lang$core$List$head(_user$project$MistbornPairing$themes)
+				])));
+};
 var _user$project$MistbornPairing$symbols = 16;
 var _user$project$MistbornPairing$resetTiles = _elm_lang$core$List$foldl(_elm_lang$core$Dict$remove);
 var _user$project$MistbornPairing$getTile = function (model) {
-	return function (_p0) {
+	return function (_p1) {
 		return A2(
 			_elm_lang$core$Maybe$withDefault,
 			-1,
-			A3(_elm_lang$core$Basics$flip, _elm_lang$core$Dict$get, model.tiles, _p0));
+			A3(_elm_lang$core$Basics$flip, _elm_lang$core$Dict$get, model.tiles, _p1));
 	};
 };
 var _user$project$MistbornPairing$checkPairing$ = F3(
@@ -11219,11 +11439,11 @@ var _user$project$MistbornPairing$checkPairing$ = F3(
 						_elm_lang$core$Basics$flip,
 						_elm_lang$core$List$map,
 						vertPath$,
-						function (_p1) {
+						function (_p2) {
 							return A2(
 								_user$project$MistbornPairing$getTile,
 								model,
-								A2(makeCoord, x$$, _p1));
+								A2(makeCoord, x$$, _p2));
 						})) || A2(
 					_elm_lang$core$List$any,
 					F2(
@@ -11232,11 +11452,11 @@ var _user$project$MistbornPairing$checkPairing$ = F3(
 						})(-1),
 					A2(
 						_elm_lang$core$List$map,
-						function (_p2) {
+						function (_p3) {
 							return A2(
 								_user$project$MistbornPairing$getTile,
 								model,
-								A3(_elm_lang$core$Basics$flip, makeCoord, y$, _p2));
+								A3(_elm_lang$core$Basics$flip, makeCoord, y$, _p3));
 						},
 						A2(
 							_elm_lang$core$List$filter,
@@ -11259,7 +11479,7 @@ var _user$project$MistbornPairing$checkPairing$ = F3(
 					_elm_lang$core$Basics$flip,
 					_elm_community$list_extra$List_Extra$takeWhile,
 					dx,
-					function (_p3) {
+					function (_p4) {
 						return A2(
 							F2(
 								function (x, y) {
@@ -11279,14 +11499,14 @@ var _user$project$MistbornPairing$checkPairing$ = F3(
 												return x + y;
 											}),
 										x,
-										_p3))));
+										_p4))));
 					});
 				return _elm_lang$core$Maybe$oneOf(
 					A3(
 						_elm_lang$core$Basics$flip,
 						_elm_lang$core$List$map,
 						topPath,
-						function (_p4) {
+						function (_p5) {
 							return A6(
 								checkLShape,
 								makeCoord,
@@ -11300,7 +11520,7 @@ var _user$project$MistbornPairing$checkPairing$ = F3(
 											return x + y;
 										}),
 									x,
-									_p4));
+									_p5));
 						}));
 			});
 		var checkPath$ = F6(
@@ -11315,11 +11535,11 @@ var _user$project$MistbornPairing$checkPairing$ = F3(
 						_elm_lang$core$Basics$flip,
 						_elm_lang$core$List$map,
 						_elm_lang$core$Native_List.range(x + 1, x$ - 1),
-						function (_p5) {
+						function (_p6) {
 							return A2(
 								_user$project$MistbornPairing$getTile,
 								model,
-								A3(_elm_lang$core$Basics$flip, makeCoord, y, _p5));
+								A3(_elm_lang$core$Basics$flip, makeCoord, y, _p6));
 						}))) ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just(
 					_elm_lang$core$Native_List.fromArray(
 						[
@@ -11353,12 +11573,12 @@ var _user$project$MistbornPairing$checkPairing$ = F3(
 			function (lastPass, makeCoord, dim, pos, pos$) {
 				checkPath:
 				while (true) {
-					var _p6 = pos$;
-					var x$ = _p6._0;
-					var y$ = _p6._1;
-					var _p7 = pos;
-					var x = _p7._0;
-					var y = _p7._1;
+					var _p7 = pos$;
+					var x$ = _p7._0;
+					var y$ = _p7._1;
+					var _p8 = pos;
+					var x = _p8._0;
+					var y = _p8._1;
 					if (_elm_lang$core$Native_Utils.cmp(x, x$) > 0) {
 						var _v0 = lastPass,
 							_v1 = makeCoord,
@@ -11407,15 +11627,15 @@ var _user$project$MistbornPairing$hasPairs = F2(
 					_elm_lang$core$Maybe$Nothing);
 			});
 		var checkPoses = function (poses) {
-			var _p8 = poses;
-			if (_p8.ctor === '[]') {
+			var _p9 = poses;
+			if (_p9.ctor === '[]') {
 				return false;
 			} else {
-				var _p9 = _p8._1;
+				var _p10 = _p9._1;
 				return A2(
 					_elm_lang$core$List$any,
-					check(_p8._0),
-					_p9) || checkPoses(_p9);
+					check(_p9._0),
+					_p10) || checkPoses(_p10);
 			}
 		};
 		var posesOf = function (sym) {
@@ -11424,14 +11644,14 @@ var _user$project$MistbornPairing$hasPairs = F2(
 				_elm_lang$core$Basics$fst,
 				A2(
 					_elm_lang$core$List$filter,
-					function (_p10) {
+					function (_p11) {
 						return A2(
 							F2(
 								function (x, y) {
 									return _elm_lang$core$Native_Utils.eq(x, y);
 								}),
 							sym,
-							_elm_lang$core$Basics$snd(_p10));
+							_elm_lang$core$Basics$snd(_p11));
 					},
 					_elm_lang$core$Dict$toList(tiles)));
 		};
@@ -11442,15 +11662,15 @@ var _user$project$MistbornPairing$hasPairs = F2(
 			A2(_elm_lang$core$List$map, posesOf, syms));
 	});
 var _user$project$MistbornPairing$showPath = function (model) {
-	var makePoint = function (_p11) {
-		var _p12 = _p11;
+	var makePoint = function (_p12) {
+		var _p13 = _p12;
 		return A2(
 			_elm_lang$core$Basics_ops['++'],
-			_elm_lang$core$Basics$toString((_p12._0 * 80) + 40),
+			_elm_lang$core$Basics$toString((_p13._0 * 80) + 40),
 			A2(
 				_elm_lang$core$Basics_ops['++'],
 				',',
-				_elm_lang$core$Basics$toString((_p12._1 * 105) + 53)));
+				_elm_lang$core$Basics$toString((_p13._1 * 105) + 53)));
 	};
 	var makePoints = A2(
 		_elm_lang$core$String$join,
@@ -11498,12 +11718,12 @@ var _user$project$MistbornPairing$convertBoard = F2(
 				tiles));
 	});
 var _user$project$MistbornPairing$setTiles = function (board) {
-	return function (_p13) {
+	return function (_p14) {
 		return _elm_lang$core$Dict$fromList(
 			A2(
 				_elm_community$list_extra$List_Extra$zip,
 				_elm_lang$core$Dict$keys(board),
-				_p13));
+				_p14));
 	};
 };
 var _user$project$MistbornPairing$shuffle = function (l) {
@@ -11522,25 +11742,25 @@ var _user$project$MistbornPairing$shuffle = function (l) {
 					A2(_elm_lang$core$List$drop, n + 1, l))
 			};
 		});
-	var shuffle$ = function (_p14) {
-		var _p15 = _p14;
-		var _p19 = _p15._1;
-		var _p18 = _p15._0;
-		var len = _elm_lang$core$List$length(_p19);
+	var shuffle$ = function (_p15) {
+		var _p16 = _p15;
+		var _p20 = _p16._1;
+		var _p19 = _p16._0;
+		var len = _elm_lang$core$List$length(_p20);
 		return _elm_lang$core$Native_Utils.eq(len, 0) ? _mgold$elm_random_pcg$Random_Pcg$constant(
-			{ctor: '_Tuple2', _0: _p18, _1: _p19}) : A2(
+			{ctor: '_Tuple2', _0: _p19, _1: _p20}) : A2(
 			_mgold$elm_random_pcg$Random_Pcg$andThen,
 			A2(
 				_mgold$elm_random_pcg$Random_Pcg$map,
-				A2(_elm_lang$core$Basics$flip, pick, _p19),
+				A2(_elm_lang$core$Basics$flip, pick, _p20),
 				A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, len - 1)),
-			function (_p16) {
-				var _p17 = _p16;
+			function (_p17) {
+				var _p18 = _p17;
 				return shuffle$(
 					{
 						ctor: '_Tuple2',
-						_0: A2(_elm_lang$core$List_ops['::'], _p17._0, _p18),
-						_1: _p17._1
+						_0: A2(_elm_lang$core$List_ops['::'], _p18._0, _p19),
+						_1: _p18._1
 					});
 			});
 	};
@@ -11566,18 +11786,38 @@ var _user$project$MistbornPairing$runGenerator = F2(
 			f,
 			A2(
 				_elm_lang$core$Random$map,
-				function (_p20) {
+				function (_p21) {
 					return _elm_lang$core$Basics$fst(
 						A2(
 							_mgold$elm_random_pcg$Random_Pcg$step,
 							gen,
-							_mgold$elm_random_pcg$Random_Pcg$initialSeed(_p20)));
+							_mgold$elm_random_pcg$Random_Pcg$initialSeed(_p21)));
 				},
 				A2(_elm_lang$core$Random$int, _elm_lang$core$Random$minInt, _elm_lang$core$Random$maxInt)));
 	});
 var _user$project$MistbornPairing$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$none;
 };
+var _user$project$MistbornPairing$Params = F2(
+	function (a, b) {
+		return {lang: a, theme: b};
+	});
+var _user$project$MistbornPairing$fromUrl = function (_p22) {
+	return A2(
+		_elm_lang$core$Result$withDefault,
+		{lang: 'zh', theme: 'plain'},
+		A3(
+			_evancz$url_parser$UrlParser$parse,
+			_user$project$MistbornPairing$Params,
+			A2(_evancz$url_parser$UrlParser_ops['</>'], _user$project$MistbornPairing$langParser, _user$project$MistbornPairing$themeParser),
+			A2(
+				_elm_lang$core$String$dropLeft,
+				2,
+				function (_) {
+					return _.hash;
+				}(_p22))));
+};
+var _user$project$MistbornPairing$urlParser = _elm_lang$navigation$Navigation$makeParser(_user$project$MistbornPairing$fromUrl);
 var _user$project$MistbornPairing$Model = F8(
 	function (a, b, c, d, e, f, g, h) {
 		return {rows: a, cols: b, tiles: c, hoverAt: d, clicked: e, path: f, theme: g, i18n: h};
@@ -11589,7 +11829,9 @@ var _user$project$MistbornPairing$ChangeTheme = function (a) {
 	return {ctor: 'ChangeTheme', _0: a};
 };
 var _user$project$MistbornPairing$themePicker = F3(
-	function (model, n, theme) {
+	function (model, n, _p23) {
+		var _p24 = _p23;
+		var _p25 = _p24._0;
 		var link = A2(
 			_elm_lang$html$Html$a,
 			_elm_lang$core$Native_List.fromArray(
@@ -11602,7 +11844,7 @@ var _user$project$MistbornPairing$themePicker = F3(
 							{ctor: '_Tuple2', _0: 'text-align', _1: 'center'}
 						])),
 					_elm_lang$html$Html_Events$onClick(
-					_user$project$MistbornPairing$ChangeTheme(theme))
+					_user$project$MistbornPairing$ChangeTheme(_p25))
 				]),
 			_elm_lang$core$Native_List.fromArray(
 				[
@@ -11610,10 +11852,7 @@ var _user$project$MistbornPairing$themePicker = F3(
 					A2(
 						_elm_lang$core$Maybe$withDefault,
 						'',
-						A2(
-							_elm_lang$core$Dict$get,
-							_elm_lang$core$Basics$fst(theme),
-							model.i18n.translations.themes)))
+						A2(_elm_lang$core$Dict$get, _p25, model.i18n.translations.themes)))
 				]));
 		return _elm_lang$core$Native_Utils.eq(n, 0) ? _elm_lang$core$Native_List.fromArray(
 			[link]) : _elm_lang$core$Native_List.fromArray(
@@ -11635,21 +11874,21 @@ var _user$project$MistbornPairing$MouseEnter = function (a) {
 	return {ctor: 'MouseEnter', _0: a};
 };
 var _user$project$MistbornPairing$showTile = F2(
-	function (model, _p21) {
-		var _p22 = _p21;
-		var _p25 = _p22._1;
-		var _p24 = _p22._0;
+	function (model, _p26) {
+		var _p27 = _p26;
+		var _p30 = _p27._1;
+		var _p29 = _p27._0;
 		var isHoverAt = _elm_lang$core$Native_Utils.eq(
 			model.hoverAt,
-			_elm_lang$core$Maybe$Just(_p24));
-		var isClicked = A2(_elm_lang$core$List$member, _p24, model.clicked);
+			_elm_lang$core$Maybe$Just(_p29));
+		var isClicked = A2(_elm_lang$core$List$member, _p29, model.clicked);
 		var border = isClicked ? 'inset 3px gold' : (isHoverAt ? 'inset 3px blue' : 'solid 1px black');
 		var width = (isClicked || isHoverAt) ? '70px' : '75px';
 		var height = (isClicked || isHoverAt) ? '95px' : '100px';
-		var _p23 = _p24;
-		var x = _p23._0;
-		var y = _p23._1;
-		return (_elm_lang$core$Native_Utils.cmp(_p25, 0) < 0) ? _elm_lang$core$Native_List.fromArray(
+		var _p28 = _p29;
+		var x = _p28._0;
+		var y = _p28._1;
+		return (_elm_lang$core$Native_Utils.cmp(_p30, 0) < 0) ? _elm_lang$core$Native_List.fromArray(
 			[]) : _elm_lang$core$Native_List.fromArray(
 			[
 				A2(
@@ -11668,7 +11907,7 @@ var _user$project$MistbornPairing$showTile = F2(
 									'/',
 									A2(
 										_elm_lang$core$Basics_ops['++'],
-										_elm_lang$core$Basics$toString(_p25),
+										_elm_lang$core$Basics$toString(_p30),
 										A2(
 											_elm_lang$core$Basics_ops['++'],
 											'.',
@@ -11700,11 +11939,11 @@ var _user$project$MistbornPairing$showTile = F2(
 								{ctor: '_Tuple2', _0: 'background', _1: 'white'}
 							])),
 						_elm_lang$html$Html_Events$onClick(
-						_user$project$MistbornPairing$ClickOn(_p24)),
+						_user$project$MistbornPairing$ClickOn(_p29)),
 						_elm_lang$html$Html_Events$onMouseEnter(
-						_user$project$MistbornPairing$MouseEnter(_p24)),
+						_user$project$MistbornPairing$MouseEnter(_p29)),
 						_elm_lang$html$Html_Events$onMouseLeave(
-						_user$project$MistbornPairing$MouseLeave(_p24))
+						_user$project$MistbornPairing$MouseLeave(_p29))
 					]),
 				_elm_lang$core$Native_List.fromArray(
 					[]))
@@ -11788,12 +12027,12 @@ var _user$project$MistbornPairing$view = function (model) {
 									A2(
 										_elm_lang$core$Maybe$andThen,
 										model.hoverAt,
-										function (_p26) {
+										function (_p31) {
 											return A3(
 												_elm_lang$core$Basics$flip,
 												_elm_lang$core$Array$get,
 												model.i18n.translations.symbolIntro,
-												A2(_user$project$MistbornPairing$getTile, model, _p26));
+												A2(_user$project$MistbornPairing$getTile, model, _p31));
 										})))
 							]))
 					])),
@@ -11837,8 +12076,8 @@ var _user$project$MistbornPairing$ShuffleBoard = function (a) {
 };
 var _user$project$MistbornPairing$checkPairing = F3(
 	function (pos, pos$, model) {
-		var _p27 = A3(_user$project$MistbornPairing$checkPairing$, model, pos, pos$);
-		if (_p27.ctor === 'Just') {
+		var _p32 = A3(_user$project$MistbornPairing$checkPairing$, model, pos, pos$);
+		if (_p32.ctor === 'Just') {
 			var newBoard = A2(_user$project$MistbornPairing$resetTiles, model.tiles, model.clicked);
 			var msg = _elm_lang$core$Basics$always(
 				_user$project$MistbornPairing$Paired(model.clicked));
@@ -11846,7 +12085,7 @@ var _user$project$MistbornPairing$checkPairing = F3(
 				ctor: '_Tuple2',
 				_0: _elm_lang$core$Native_Utils.update(
 					model,
-					{path: _p27._0}),
+					{path: _p32._0}),
 				_1: A3(
 					_elm_lang$core$Task$perform,
 					msg,
@@ -11876,21 +12115,21 @@ var _user$project$MistbornPairing$checkPairing = F3(
 	});
 var _user$project$MistbornPairing$update = F2(
 	function (msg, model) {
-		var _p28 = msg;
-		switch (_p28.ctor) {
+		var _p33 = msg;
+		switch (_p33.ctor) {
 			case 'GenerateBoard':
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							tiles: A2(_user$project$MistbornPairing$convertBoard, model, _p28._0)
+							tiles: A2(_user$project$MistbornPairing$convertBoard, model, _p33._0)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ShuffleBoard':
-				var _p29 = _p28._0;
-				var newBoard = A2(_user$project$MistbornPairing$setTiles, model.tiles, _p29);
+				var _p34 = _p33._0;
+				var newBoard = A2(_user$project$MistbornPairing$setTiles, model.tiles, _p34);
 				return A2(_user$project$MistbornPairing$hasPairs, model, newBoard) ? {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -11903,7 +12142,7 @@ var _user$project$MistbornPairing$update = F2(
 					_1: A2(
 						_user$project$MistbornPairing$runGenerator,
 						_user$project$MistbornPairing$ShuffleBoard,
-						_user$project$MistbornPairing$shuffle(_p29))
+						_user$project$MistbornPairing$shuffle(_p34))
 				};
 			case 'MouseEnter':
 				return {
@@ -11911,14 +12150,14 @@ var _user$project$MistbornPairing$update = F2(
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							hoverAt: _elm_lang$core$Maybe$Just(_p28._0)
+							hoverAt: _elm_lang$core$Maybe$Just(_p33._0)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'MouseLeave':
 				var pos$ = _elm_lang$core$Native_Utils.eq(
 					model.hoverAt,
-					_elm_lang$core$Maybe$Just(_p28._0)) ? _elm_lang$core$Maybe$Nothing : model.hoverAt;
+					_elm_lang$core$Maybe$Just(_p33._0)) ? _elm_lang$core$Maybe$Nothing : model.hoverAt;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -11927,19 +12166,19 @@ var _user$project$MistbornPairing$update = F2(
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ClickOn':
-				var _p32 = _p28._0;
+				var _p37 = _p33._0;
 				var setClicked = function (m) {
 					return _elm_lang$core$Native_Utils.update(
 						m,
 						{
 							clicked: _elm_lang$core$Native_List.fromArray(
-								[_p32])
+								[_p37])
 						});
 				};
-				var _p30 = model.clicked;
-				if ((_p30.ctor === '::') && (_p30._1.ctor === '[]')) {
-					var _p31 = _p30._0;
-					if (_elm_lang$core$Native_Utils.eq(_p32, _p31)) {
+				var _p35 = model.clicked;
+				if ((_p35.ctor === '::') && (_p35._1.ctor === '[]')) {
+					var _p36 = _p35._0;
+					if (_elm_lang$core$Native_Utils.eq(_p37, _p36)) {
 						return {
 							ctor: '_Tuple2',
 							_0: _elm_lang$core$Native_Utils.update(
@@ -11951,21 +12190,21 @@ var _user$project$MistbornPairing$update = F2(
 							_1: _elm_lang$core$Platform_Cmd$none
 						};
 					} else {
-						var t$ = A2(_user$project$MistbornPairing$getTile, model, _p31);
-						var t = A2(_user$project$MistbornPairing$getTile, model, _p32);
+						var t$ = A2(_user$project$MistbornPairing$getTile, model, _p36);
+						var t = A2(_user$project$MistbornPairing$getTile, model, _p37);
 						return (!_elm_lang$core$Native_Utils.eq(t, t$)) ? {
 							ctor: '_Tuple2',
 							_0: setClicked(model),
 							_1: _elm_lang$core$Platform_Cmd$none
 						} : A3(
 							_user$project$MistbornPairing$checkPairing,
-							_p32,
-							_p31,
+							_p37,
+							_p36,
 							_elm_lang$core$Native_Utils.update(
 								model,
 								{
 									clicked: _elm_lang$core$Native_List.fromArray(
-										[_p32, _p31])
+										[_p37, _p36])
 								}));
 					}
 				} else {
@@ -11985,7 +12224,7 @@ var _user$project$MistbornPairing$update = F2(
 			case 'Paired':
 				return {
 					ctor: '_Tuple2',
-					_0: (!_elm_lang$core$Native_Utils.eq(model.clicked, _p28._0)) ? model : _elm_lang$core$Native_Utils.update(
+					_0: (!_elm_lang$core$Native_Utils.eq(model.clicked, _p33._0)) ? model : _elm_lang$core$Native_Utils.update(
 						model,
 						{
 							clicked: _elm_lang$core$Native_List.fromArray(
@@ -11995,33 +12234,77 @@ var _user$project$MistbornPairing$update = F2(
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeTheme':
+				var _p38 = _p33._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{theme: _p28._0}),
-					_1: _elm_lang$core$Platform_Cmd$none
+						{
+							theme: _user$project$MistbornPairing$findTheme(_p38)
+						}),
+					_1: _elm_lang$navigation$Navigation$newUrl(
+						_user$project$MistbornPairing$toUrl(
+							A2(_user$project$MistbornPairing$Params, model.i18n.lang, _p38)))
 				};
 			default:
-				var _p33 = A2(_user$project$MistbornPairingI18n$update, _p28._0, model.i18n);
-				var m = _p33._0;
-				var c = _p33._1;
+				var _p39 = A2(_user$project$MistbornPairingI18n$update, _p33._0, model.i18n);
+				var m = _p39._0;
+				var c = _p39._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{i18n: m}),
-					_1: A2(_elm_lang$core$Platform_Cmd$map, _user$project$MistbornPairing$OnI18n, c)
+					_1: _elm_lang$core$Platform_Cmd$batch(
+						_elm_lang$core$Native_List.fromArray(
+							[
+								A2(_elm_lang$core$Platform_Cmd$map, _user$project$MistbornPairing$OnI18n, c),
+								_elm_lang$navigation$Navigation$newUrl(
+								_user$project$MistbornPairing$toUrl(
+									A2(
+										_user$project$MistbornPairing$Params,
+										m.lang,
+										_elm_lang$core$Basics$fst(model.theme))))
+							]))
 				};
 		}
+	});
+var _user$project$MistbornPairing$urlUpdate = F2(
+	function (params, model) {
+		var _p40 = _elm_lang$core$Native_Utils.eq(params.lang, model.i18n.lang) ? {ctor: '_Tuple2', _0: model.i18n, _1: _elm_lang$core$Platform_Cmd$none} : A2(
+			_user$project$MistbornPairingI18n$update,
+			_user$project$MistbornPairingI18n$Fetch(params.lang),
+			model.i18n);
+		var m$ = _p40._0;
+		var c$ = _p40._1;
+		var _p41 = _elm_lang$core$Native_Utils.eq(
+			params.theme,
+			_elm_lang$core$Basics$fst(model.theme)) ? {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none} : A2(
+			_user$project$MistbornPairing$update,
+			_user$project$MistbornPairing$ChangeTheme(params.theme),
+			model);
+		var m = _p41._0;
+		var c = _p41._1;
+		return {
+			ctor: '_Tuple2',
+			_0: _elm_lang$core$Native_Utils.update(
+				m,
+				{i18n: m$}),
+			_1: _elm_lang$core$Platform_Cmd$batch(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						c,
+						A2(_elm_lang$core$Platform_Cmd$map, _user$project$MistbornPairing$OnI18n, c$)
+					]))
+		};
 	});
 var _user$project$MistbornPairing$GenerateBoard = function (a) {
 	return {ctor: 'GenerateBoard', _0: a};
 };
-var _user$project$MistbornPairing$init = function () {
-	var _p34 = _user$project$MistbornPairingI18n$init('zh');
-	var model$ = _p34._0;
-	var cmd$ = _p34._1;
+var _user$project$MistbornPairing$init = function (params) {
+	var _p42 = _user$project$MistbornPairingI18n$init(params.lang);
+	var model$ = _p42._0;
+	var cmd$ = _p42._1;
 	var c = 12;
 	var r = 6;
 	return {
@@ -12035,10 +12318,7 @@ var _user$project$MistbornPairing$init = function () {
 				[]),
 			path: _elm_lang$core$Native_List.fromArray(
 				[]),
-			theme: A2(
-				_elm_lang$core$Maybe$withDefault,
-				{ctor: '_Tuple2', _0: '', _1: ''},
-				_elm_lang$core$List$head(_user$project$MistbornPairing$themes)),
+			theme: _user$project$MistbornPairing$findTheme(params.theme),
 			i18n: model$
 		},
 		_1: _elm_lang$core$Platform_Cmd$batch(
@@ -12057,10 +12337,12 @@ var _user$project$MistbornPairing$init = function () {
 					A2(_elm_lang$core$Platform_Cmd$map, _user$project$MistbornPairing$OnI18n, cmd$)
 				]))
 	};
-}();
+};
 var _user$project$MistbornPairing$main = {
-	main: _elm_lang$html$Html_App$program(
-		{init: _user$project$MistbornPairing$init, view: _user$project$MistbornPairing$view, update: _user$project$MistbornPairing$update, subscriptions: _user$project$MistbornPairing$subscriptions})
+	main: A2(
+		_elm_lang$navigation$Navigation$program,
+		_user$project$MistbornPairing$urlParser,
+		{init: _user$project$MistbornPairing$init, view: _user$project$MistbornPairing$view, update: _user$project$MistbornPairing$update, urlUpdate: _user$project$MistbornPairing$urlUpdate, subscriptions: _user$project$MistbornPairing$subscriptions})
 };
 
 var Elm = {};
