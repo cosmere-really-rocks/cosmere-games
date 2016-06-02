@@ -1,4 +1,7 @@
 { "backButton": "<< Back to List"
+  , "themes" : { "plain": "Plain"
+                , "lien": "LiEN²"
+              }
   , "symbolIntro":
   [ "Aluminum （Aluminum Gnat） Wipes Internal Allomantic Reserves"
     , "Bendalloy (Slider) Speeds Up Time"
