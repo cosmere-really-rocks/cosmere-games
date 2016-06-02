@@ -1,6 +1,7 @@
 module MistbornPairingI18n exposing ( Model, Msg, init, update, view )
 
 import Array
+import Dict
 import Json.Decode exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -13,6 +14,7 @@ import Task
 
 type alias Translations = { backButton : String
                           , symbolIntro : Array.Array String
+                          , themes : Dict.Dict String String
                           }
 type alias Model = { lang : String
                    , translations : Translations
@@ -26,6 +28,7 @@ init : String -> (Model, Cmd Msg)
 init lang = ( { lang = lang
               , translations = { backButton = "<<"
                                , symbolIntro = Array.empty
+                               , themes = Dict.empty
                                }
               }
             , fetch lang
@@ -46,10 +49,7 @@ update msg model =
 view : Model -> Maybe Int -> Html Msg
 view model symbol =
     let padding = style [ ( "padding", "0 20px" ) ]
-    in div [ style [ ( "z-index", "100" )
-                   , ( "position", "absolute" )
-                   , ( "width", "100%" )
-                   ]
+    in div [ style [ ( "width", "100%" ) ]
            ] [ a [ href "index.html"
                  , padding ] [ text model.translations.backButton ]
              , a [ href "javascript:void()"
@@ -74,6 +74,7 @@ view model symbol =
 fetch : String -> Cmd Msg
 fetch lang = Task.perform (FetchFail lang) FetchSucceed
                 <| flip Http.get ("mistborn-pairing." ++ lang ++ ".json")
-                <| object2 Translations
+                <| object3 Translations
                     ("backButton" := string)
                     ("symbolIntro" := array string)
+                    ("themes" := dict string)

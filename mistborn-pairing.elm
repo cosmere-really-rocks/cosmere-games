@@ -9,6 +9,7 @@ import List
 import List.Extra as List
 import List.Split as List
 import Maybe
+import Navigation
 import Platform.Cmd as Platform
 import Process
 import Random as Rand
@@ -22,10 +23,11 @@ import Time
 import MistbornPairingI18n as I18n
 
 main = Html.program { init = init
-                    , view = view
-                    , update = update
-                    , subscriptions = subscriptions
-                    }
+                          , view = view
+                          , update = update
+           --               , urlUpdate = urlUpdate
+                          , subscriptions = subscriptions
+                          }
 
 type alias Tile = Int
 type alias TilePos = (Int, Int)
@@ -36,6 +38,7 @@ type alias Model = { rows : Int
                    , hoverAt : Maybe TilePos
                    , clicked : List TilePos
                    , path : List TilePos
+                   , theme : (String, String)
                    , i18n : I18n.Model
                    }
 
@@ -45,6 +48,7 @@ type Msg = GenerateBoard (List Tile)
          | MouseLeave TilePos
          | ClickOn TilePos
          | Paired (List TilePos)
+         | ChangeTheme (String, String)
          | OnI18n I18n.Msg
 
 init : (Model, Cmd Msg)
@@ -57,6 +61,7 @@ init = let r = 6
             , hoverAt = Nothing
             , clicked = []
             , path = []
+            , theme = Maybe.withDefault ( "", "" ) <| List.head themes
             , i18n = model'
             }
           , Platform.batch [ runGenerator GenerateBoard
@@ -108,6 +113,8 @@ update msg model =
               else resetTiles model.clicked { model | clicked = [] }
             , Cmd.none
             )
+        ChangeTheme theme ->
+            ( { model | theme = theme }, Cmd.none )
         OnI18n i18n ->
             let ( m, c ) = I18n.update i18n model.i18n
             in ( { model | i18n = m }, Platform.map OnI18n c )
@@ -126,10 +133,19 @@ view model =
                  , ( "position", "absolute" )
                  ]
     in div [ Html.style styles ]
-        [ Html.map OnI18n
-          <| I18n.view model.i18n
-          <| Maybe.map (getTile model)
-          <| model.hoverAt
+        [ div [ Html.style [ ("z-index", "100" )
+                           , ( "position", "absolute" )
+                           , ( "width", "100%" )
+                           ]
+              ]
+              [ Html.map OnI18n
+                  <| I18n.view model.i18n
+                  <| Maybe.map (getTile model)
+                  <| model.hoverAt
+              , div [ Html.style [ ( "width", "100%" ) ] ]
+                  <| List.concat
+                  <| List.indexedMap (themePicker model) themes
+              ]
         , div [ Html.style <| styles ++ [ ( "z-index", "10" )
                                         , ( "background",  "rgba(0,0,0,0)" )
                                         ]
@@ -200,7 +216,8 @@ showTile model ( pos, t ) =
         height = if isClicked || isHoverAt then "95px" else "100px"
     in if t < 0
        then []
-       else [ img [ src (toString t ++ ".svg")
+       else [ img [ src ("themes/" ++ fst (model.theme) ++ "/" ++ toString t
+                         ++ "." ++ snd (model.theme))
                   , Html.style [ ( "width", width )
                                , ( "height", height )
                                , ( "top", toString (y * 105) ++ "px" )
@@ -334,4 +351,22 @@ resetTiles coords model =
 
 symbols : Int
 symbols = 16
-              
+
+themePicker : Model -> Int -> (String, String) -> List (Html Msg)
+themePicker model n theme =
+    let link = Html.a [ Html.href "javascript:void()"
+                      , Html.style [ ( "padding", "0 20px" ) ]
+                      , onClick <| ChangeTheme theme
+                      ] [ Html.text
+                          <| Maybe.withDefault ""
+                          <| Dict.get (fst theme)
+                          <| model.i18n.translations.themes
+                        ]
+    in if n == 0
+       then [ link ]
+       else [ Html.text "|", link ]
+
+themes : List (String, String)
+themes = [ ( "plain", "svg" )
+         , ( "lien", "jpg" )
+         ]
