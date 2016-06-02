@@ -11069,105 +11069,71 @@ var _user$project$MistbornPairingI18n$update = F2(
 				};
 		}
 	});
-var _user$project$MistbornPairingI18n$view = F2(
-	function (model, symbol) {
-		var padding = _elm_lang$html$Html_Attributes$style(
-			_elm_lang$core$Native_List.fromArray(
-				[
-					{ctor: '_Tuple2', _0: 'padding', _1: '0 20px'}
-				]));
-		return A2(
-			_elm_lang$html$Html$div,
-			_elm_lang$core$Native_List.fromArray(
-				[
-					_elm_lang$html$Html_Attributes$style(
-					_elm_lang$core$Native_List.fromArray(
-						[
-							{ctor: '_Tuple2', _0: 'width', _1: '100%'}
-						]))
-				]),
-			_elm_lang$core$Native_List.fromArray(
-				[
-					A2(
-					_elm_lang$html$Html$a,
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html_Attributes$href('index.html'),
-							padding
-						]),
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html$text(model.translations.backButton)
-						])),
-					A2(
-					_elm_lang$html$Html$a,
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html_Attributes$href('javascript:void()'),
-							padding,
-							_elm_lang$html$Html_Events$onClick(
-							_user$project$MistbornPairingI18n$Fetch('en'))
-						]),
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html$text('English')
-						])),
-					_elm_lang$html$Html$text('|'),
-					A2(
-					_elm_lang$html$Html$a,
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html_Attributes$href('javascript:void()'),
-							padding,
-							_elm_lang$html$Html_Events$onClick(
-							_user$project$MistbornPairingI18n$Fetch('zh'))
-						]),
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html$text('中文')
-						])),
-					A2(
-					_elm_lang$html$Html$h2,
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html_Attributes$style(
-							_elm_lang$core$Native_List.fromArray(
-								[
-									{ctor: '_Tuple2', _0: 'color', _1: 'blue'},
-									{ctor: '_Tuple2', _0: 'text-align', _1: 'center'}
-								]))
-						]),
-					_elm_lang$core$Native_List.fromArray(
-						[
-							_elm_lang$html$Html$text(
-							A2(
-								_elm_lang$core$Maybe$withDefault,
-								'',
-								A3(
-									_elm_lang$core$Basics$flip,
-									_elm_lang$core$Array$get,
-									model.translations.symbolIntro,
-									A2(_elm_lang$core$Maybe$withDefault, -1, symbol))))
-						]))
-				]));
-	});
+var _user$project$MistbornPairingI18n$view = function (model) {
+	var padding = _elm_lang$html$Html_Attributes$style(
+		_elm_lang$core$Native_List.fromArray(
+			[
+				{ctor: '_Tuple2', _0: 'padding', _1: '0 20px'}
+			]));
+	return A2(
+		_elm_lang$html$Html$div,
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$html$Html_Attributes$style(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						{ctor: '_Tuple2', _0: 'width', _1: '100%'}
+					]))
+			]),
+		_elm_lang$core$Native_List.fromArray(
+			[
+				A2(
+				_elm_lang$html$Html$a,
+				_elm_lang$core$Native_List.fromArray(
+					[
+						_elm_lang$html$Html_Attributes$href('index.html'),
+						padding
+					]),
+				_elm_lang$core$Native_List.fromArray(
+					[
+						_elm_lang$html$Html$text(model.translations.backButton)
+					])),
+				A2(
+				_elm_lang$html$Html$a,
+				_elm_lang$core$Native_List.fromArray(
+					[
+						_elm_lang$html$Html_Attributes$href('javascript:void()'),
+						padding,
+						_elm_lang$html$Html_Events$onClick(
+						_user$project$MistbornPairingI18n$Fetch('en'))
+					]),
+				_elm_lang$core$Native_List.fromArray(
+					[
+						_elm_lang$html$Html$text('English')
+					])),
+				_elm_lang$html$Html$text('|'),
+				A2(
+				_elm_lang$html$Html$a,
+				_elm_lang$core$Native_List.fromArray(
+					[
+						_elm_lang$html$Html_Attributes$href('javascript:void()'),
+						padding,
+						_elm_lang$html$Html_Events$onClick(
+						_user$project$MistbornPairingI18n$Fetch('zh'))
+					]),
+				_elm_lang$core$Native_List.fromArray(
+					[
+						_elm_lang$html$Html$text('中文')
+					]))
+			]));
+};
 var _user$project$Main$themes = _elm_lang$core$Native_List.fromArray(
 	[
 		{ctor: '_Tuple2', _0: 'plain', _1: 'svg'},
 		{ctor: '_Tuple2', _0: 'lien', _1: 'jpg'}
 	]);
 var _user$project$Main$symbols = 16;
-var _user$project$Main$resetTiles = F2(
-	function (coords, model) {
-		var newBoard = A3(
-			_elm_lang$core$List$foldl,
-			A2(_elm_lang$core$Basics$flip, _elm_lang$core$Dict$insert, -1),
-			model.tiles,
-			coords);
-		return _elm_lang$core$Native_Utils.update(
-			model,
-			{tiles: newBoard});
-	});
+var _user$project$Main$resetTiles = _elm_lang$core$List$foldl(_elm_lang$core$Dict$remove);
 var _user$project$Main$getTile = function (model) {
 	return function (_p0) {
 		return A2(
@@ -11583,7 +11549,8 @@ var _user$project$Main$themePicker = F3(
 					_elm_lang$html$Html_Attributes$style(
 					_elm_lang$core$Native_List.fromArray(
 						[
-							{ctor: '_Tuple2', _0: 'padding', _1: '0 20px'}
+							{ctor: '_Tuple2', _0: 'padding', _1: '0 20px'},
+							{ctor: '_Tuple2', _0: 'text-align', _1: 'center'}
 						])),
 					_elm_lang$html$Html_Events$onClick(
 					_user$project$Main$ChangeTheme(theme))
@@ -11736,13 +11703,7 @@ var _user$project$Main$view = function (model) {
 						A2(
 						_elm_lang$html$Html_App$map,
 						_user$project$Main$OnI18n,
-						A2(
-							_user$project$MistbornPairingI18n$view,
-							model.i18n,
-							A2(
-								_elm_lang$core$Maybe$map,
-								_user$project$Main$getTile(model),
-								model.hoverAt))),
+						_user$project$MistbornPairingI18n$view(model.i18n)),
 						A2(
 						_elm_lang$html$Html$div,
 						_elm_lang$core$Native_List.fromArray(
@@ -11757,7 +11718,35 @@ var _user$project$Main$view = function (model) {
 							A2(
 								_elm_lang$core$List$indexedMap,
 								_user$project$Main$themePicker(model),
-								_user$project$Main$themes)))
+								_user$project$Main$themes))),
+						A2(
+						_elm_lang$html$Html$h3,
+						_elm_lang$core$Native_List.fromArray(
+							[
+								_elm_lang$html$Html_Attributes$style(
+								_elm_lang$core$Native_List.fromArray(
+									[
+										{ctor: '_Tuple2', _0: 'color', _1: 'blue'},
+										{ctor: '_Tuple2', _0: 'text-align', _1: 'center'}
+									]))
+							]),
+						_elm_lang$core$Native_List.fromArray(
+							[
+								_elm_lang$html$Html$text(
+								A2(
+									_elm_lang$core$Maybe$withDefault,
+									'',
+									A2(
+										_elm_lang$core$Maybe$andThen,
+										model.hoverAt,
+										function (_p26) {
+											return A3(
+												_elm_lang$core$Basics$flip,
+												_elm_lang$core$Array$get,
+												model.i18n.translations.symbolIntro,
+												A2(_user$project$Main$getTile, model, _p26));
+										})))
+							]))
 					])),
 				A2(
 				_elm_lang$html$Html$div,
@@ -11799,19 +11788,16 @@ var _user$project$Main$ShuffleBoard = function (a) {
 };
 var _user$project$Main$checkPairing = F3(
 	function (pos, pos$, model) {
-		var _p26 = A3(_user$project$Main$checkPairing$, model, pos, pos$);
-		if (_p26.ctor === 'Just') {
-			var newBoard = function (_) {
-				return _.tiles;
-			}(
-				A2(_user$project$Main$resetTiles, model.clicked, model));
+		var _p27 = A3(_user$project$Main$checkPairing$, model, pos, pos$);
+		if (_p27.ctor === 'Just') {
+			var newBoard = A2(_user$project$Main$resetTiles, model.tiles, model.clicked);
 			var msg = _elm_lang$core$Basics$always(
 				_user$project$Main$Paired(model.clicked));
-			return A2(_user$project$Main$hasPairs, model, newBoard) ? {
+			return (_elm_lang$core$Dict$isEmpty(newBoard) || A2(_user$project$Main$hasPairs, model, newBoard)) ? {
 				ctor: '_Tuple2',
 				_0: _elm_lang$core$Native_Utils.update(
 					model,
-					{path: _p26._0}),
+					{path: _p27._0}),
 				_1: A3(
 					_elm_lang$core$Task$perform,
 					msg,
@@ -11841,21 +11827,21 @@ var _user$project$Main$checkPairing = F3(
 	});
 var _user$project$Main$update = F2(
 	function (msg, model) {
-		var _p27 = msg;
-		switch (_p27.ctor) {
+		var _p28 = msg;
+		switch (_p28.ctor) {
 			case 'GenerateBoard':
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							tiles: A2(_user$project$Main$convertBoard, model, _p27._0)
+							tiles: A2(_user$project$Main$convertBoard, model, _p28._0)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ShuffleBoard':
-				var _p28 = _p27._0;
-				var newBoard = A2(_user$project$Main$setTiles, model.tiles, _p28);
+				var _p29 = _p28._0;
+				var newBoard = A2(_user$project$Main$setTiles, model.tiles, _p29);
 				return A2(_user$project$Main$hasPairs, model, newBoard) ? {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -11868,7 +11854,7 @@ var _user$project$Main$update = F2(
 					_1: A2(
 						_user$project$Main$runGenerator,
 						_user$project$Main$ShuffleBoard,
-						_user$project$Main$shuffle(_p28))
+						_user$project$Main$shuffle(_p29))
 				};
 			case 'MouseEnter':
 				return {
@@ -11876,14 +11862,14 @@ var _user$project$Main$update = F2(
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							hoverAt: _elm_lang$core$Maybe$Just(_p27._0)
+							hoverAt: _elm_lang$core$Maybe$Just(_p28._0)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'MouseLeave':
 				var pos$ = _elm_lang$core$Native_Utils.eq(
 					model.hoverAt,
-					_elm_lang$core$Maybe$Just(_p27._0)) ? _elm_lang$core$Maybe$Nothing : model.hoverAt;
+					_elm_lang$core$Maybe$Just(_p28._0)) ? _elm_lang$core$Maybe$Nothing : model.hoverAt;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -11892,19 +11878,19 @@ var _user$project$Main$update = F2(
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ClickOn':
-				var _p31 = _p27._0;
+				var _p32 = _p28._0;
 				var setClicked = function (m) {
 					return _elm_lang$core$Native_Utils.update(
 						m,
 						{
 							clicked: _elm_lang$core$Native_List.fromArray(
-								[_p31])
+								[_p32])
 						});
 				};
-				var _p29 = model.clicked;
-				if ((_p29.ctor === '::') && (_p29._1.ctor === '[]')) {
-					var _p30 = _p29._0;
-					if (_elm_lang$core$Native_Utils.eq(_p31, _p30)) {
+				var _p30 = model.clicked;
+				if ((_p30.ctor === '::') && (_p30._1.ctor === '[]')) {
+					var _p31 = _p30._0;
+					if (_elm_lang$core$Native_Utils.eq(_p32, _p31)) {
 						return {
 							ctor: '_Tuple2',
 							_0: _elm_lang$core$Native_Utils.update(
@@ -11916,51 +11902,47 @@ var _user$project$Main$update = F2(
 							_1: _elm_lang$core$Platform_Cmd$none
 						};
 					} else {
-						var t$ = A2(_user$project$Main$getTile, model, _p30);
-						var t = A2(_user$project$Main$getTile, model, _p31);
+						var t$ = A2(_user$project$Main$getTile, model, _p31);
+						var t = A2(_user$project$Main$getTile, model, _p32);
 						return (!_elm_lang$core$Native_Utils.eq(t, t$)) ? {
 							ctor: '_Tuple2',
 							_0: setClicked(model),
 							_1: _elm_lang$core$Platform_Cmd$none
 						} : A3(
 							_user$project$Main$checkPairing,
+							_p32,
 							_p31,
-							_p30,
 							_elm_lang$core$Native_Utils.update(
 								model,
 								{
 									clicked: _elm_lang$core$Native_List.fromArray(
-										[_p31, _p30])
+										[_p32, _p31])
 								}));
 					}
 				} else {
 					return {
 						ctor: '_Tuple2',
-						_0: A2(
-							_user$project$Main$resetTiles,
-							model.clicked,
-							setClicked(
-								_elm_lang$core$Native_Utils.update(
-									model,
-									{
-										path: _elm_lang$core$Native_List.fromArray(
-											[])
-									}))),
+						_0: setClicked(
+							_elm_lang$core$Native_Utils.update(
+								model,
+								{
+									path: _elm_lang$core$Native_List.fromArray(
+										[]),
+									tiles: A2(_user$project$Main$resetTiles, model.tiles, model.clicked)
+								})),
 						_1: _elm_lang$core$Platform_Cmd$none
 					};
 				}
 			case 'Paired':
 				return {
 					ctor: '_Tuple2',
-					_0: (!_elm_lang$core$Native_Utils.eq(model.clicked, _p27._0)) ? model : A2(
-						_user$project$Main$resetTiles,
-						model.clicked,
-						_elm_lang$core$Native_Utils.update(
-							model,
-							{
-								clicked: _elm_lang$core$Native_List.fromArray(
-									[])
-							})),
+					_0: (!_elm_lang$core$Native_Utils.eq(model.clicked, _p28._0)) ? model : _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							clicked: _elm_lang$core$Native_List.fromArray(
+								[]),
+							tiles: A2(_user$project$Main$resetTiles, model.tiles, model.clicked)
+						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeTheme':
@@ -11968,13 +11950,13 @@ var _user$project$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{theme: _p27._0}),
+						{theme: _p28._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			default:
-				var _p32 = A2(_user$project$MistbornPairingI18n$update, _p27._0, model.i18n);
-				var m = _p32._0;
-				var c = _p32._1;
+				var _p33 = A2(_user$project$MistbornPairingI18n$update, _p28._0, model.i18n);
+				var m = _p33._0;
+				var c = _p33._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -11988,9 +11970,9 @@ var _user$project$Main$GenerateBoard = function (a) {
 	return {ctor: 'GenerateBoard', _0: a};
 };
 var _user$project$Main$init = function () {
-	var _p33 = _user$project$MistbornPairingI18n$init('zh');
-	var model$ = _p33._0;
-	var cmd$ = _p33._1;
+	var _p34 = _user$project$MistbornPairingI18n$init('zh');
+	var model$ = _p34._0;
+	var cmd$ = _p34._1;
 	var c = 12;
 	var r = 6;
 	return {
