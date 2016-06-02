@@ -9544,6 +9544,362 @@ var _elm_lang$svg$Svg_Attributes$additive = _elm_lang$virtual_dom$VirtualDom$att
 var _elm_lang$svg$Svg_Attributes$accumulate = _elm_lang$virtual_dom$VirtualDom$attribute('accumulate');
 var _elm_lang$svg$Svg_Attributes$accelerate = _elm_lang$virtual_dom$VirtualDom$attribute('accelerate');
 var _elm_lang$svg$Svg_Attributes$accentHeight = _elm_lang$virtual_dom$VirtualDom$attribute('accent-height');
+//import Dict, List, Maybe, Native.Scheduler //
+
+var _evancz$elm_http$Native_Http = function() {
+
+function send(settings, request)
+{
+	return _elm_lang$core$Native_Scheduler.nativeBinding(function(callback) {
+		var req = new XMLHttpRequest();
+
+		// start
+		if (settings.onStart.ctor === 'Just')
+		{
+			req.addEventListener('loadStart', function() {
+				var task = settings.onStart._0;
+				_elm_lang$core$Native_Scheduler.rawSpawn(task);
+			});
+		}
+
+		// progress
+		if (settings.onProgress.ctor === 'Just')
+		{
+			req.addEventListener('progress', function(event) {
+				var progress = !event.lengthComputable
+					? _elm_lang$core$Maybe$Nothing
+					: _elm_lang$core$Maybe$Just({
+						loaded: event.loaded,
+						total: event.total
+					});
+				var task = settings.onProgress._0(progress);
+				_elm_lang$core$Native_Scheduler.rawSpawn(task);
+			});
+		}
+
+		// end
+		req.addEventListener('error', function() {
+			return callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'RawNetworkError' }));
+		});
+
+		req.addEventListener('timeout', function() {
+			return callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'RawTimeout' }));
+		});
+
+		req.addEventListener('load', function() {
+			return callback(_elm_lang$core$Native_Scheduler.succeed(toResponse(req)));
+		});
+
+		req.open(request.verb, request.url, true);
+
+		// set all the headers
+		function setHeader(pair) {
+			req.setRequestHeader(pair._0, pair._1);
+		}
+		A2(_elm_lang$core$List$map, setHeader, request.headers);
+
+		// set the timeout
+		req.timeout = settings.timeout;
+
+		// enable this withCredentials thing
+		req.withCredentials = settings.withCredentials;
+
+		// ask for a specific MIME type for the response
+		if (settings.desiredResponseType.ctor === 'Just')
+		{
+			req.overrideMimeType(settings.desiredResponseType._0);
+		}
+
+		// actuall send the request
+		if(request.body.ctor === "BodyFormData")
+		{
+			req.send(request.body.formData)
+		}
+		else
+		{
+			req.send(request.body._0);
+		}
+
+		return function() {
+			req.abort();
+		};
+	});
+}
+
+
+// deal with responses
+
+function toResponse(req)
+{
+	var tag = req.responseType === 'blob' ? 'Blob' : 'Text'
+	var response = tag === 'Blob' ? req.response : req.responseText;
+	return {
+		status: req.status,
+		statusText: req.statusText,
+		headers: parseHeaders(req.getAllResponseHeaders()),
+		url: req.responseURL,
+		value: { ctor: tag, _0: response }
+	};
+}
+
+
+function parseHeaders(rawHeaders)
+{
+	var headers = _elm_lang$core$Dict$empty;
+
+	if (!rawHeaders)
+	{
+		return headers;
+	}
+
+	var headerPairs = rawHeaders.split('\u000d\u000a');
+	for (var i = headerPairs.length; i--; )
+	{
+		var headerPair = headerPairs[i];
+		var index = headerPair.indexOf('\u003a\u0020');
+		if (index > 0)
+		{
+			var key = headerPair.substring(0, index);
+			var value = headerPair.substring(index + 2);
+
+			headers = A3(_elm_lang$core$Dict$update, key, function(oldValue) {
+				if (oldValue.ctor === 'Just')
+				{
+					return _elm_lang$core$Maybe$Just(value + ', ' + oldValue._0);
+				}
+				return _elm_lang$core$Maybe$Just(value);
+			}, headers);
+		}
+	}
+
+	return headers;
+}
+
+
+function multipart(dataList)
+{
+	var formData = new FormData();
+
+	while (dataList.ctor !== '[]')
+	{
+		var data = dataList._0;
+		if (data.ctor === 'StringData')
+		{
+			formData.append(data._0, data._1);
+		}
+		else
+		{
+			var fileName = data._1.ctor === 'Nothing'
+				? undefined
+				: data._1._0;
+			formData.append(data._0, data._2, fileName);
+		}
+		dataList = dataList._1;
+	}
+
+	return { ctor: 'BodyFormData', formData: formData };
+}
+
+
+function uriEncode(string)
+{
+	return encodeURIComponent(string);
+}
+
+function uriDecode(string)
+{
+	return decodeURIComponent(string);
+}
+
+return {
+	send: F2(send),
+	multipart: multipart,
+	uriEncode: uriEncode,
+	uriDecode: uriDecode
+};
+
+}();
+var _evancz$elm_http$Http$send = _evancz$elm_http$Native_Http.send;
+var _evancz$elm_http$Http$defaultSettings = {timeout: 0, onStart: _elm_lang$core$Maybe$Nothing, onProgress: _elm_lang$core$Maybe$Nothing, desiredResponseType: _elm_lang$core$Maybe$Nothing, withCredentials: false};
+var _evancz$elm_http$Http$multipart = _evancz$elm_http$Native_Http.multipart;
+var _evancz$elm_http$Http$uriDecode = _evancz$elm_http$Native_Http.uriDecode;
+var _evancz$elm_http$Http$uriEncode = _evancz$elm_http$Native_Http.uriEncode;
+var _evancz$elm_http$Http$queryEscape = function (string) {
+	return A2(
+		_elm_lang$core$String$join,
+		'+',
+		A2(
+			_elm_lang$core$String$split,
+			'%20',
+			_evancz$elm_http$Http$uriEncode(string)));
+};
+var _evancz$elm_http$Http$queryPair = function (_p0) {
+	var _p1 = _p0;
+	return A2(
+		_elm_lang$core$Basics_ops['++'],
+		_evancz$elm_http$Http$queryEscape(_p1._0),
+		A2(
+			_elm_lang$core$Basics_ops['++'],
+			'=',
+			_evancz$elm_http$Http$queryEscape(_p1._1)));
+};
+var _evancz$elm_http$Http$url = F2(
+	function (baseUrl, args) {
+		var _p2 = args;
+		if (_p2.ctor === '[]') {
+			return baseUrl;
+		} else {
+			return A2(
+				_elm_lang$core$Basics_ops['++'],
+				baseUrl,
+				A2(
+					_elm_lang$core$Basics_ops['++'],
+					'?',
+					A2(
+						_elm_lang$core$String$join,
+						'&',
+						A2(_elm_lang$core$List$map, _evancz$elm_http$Http$queryPair, args))));
+		}
+	});
+var _evancz$elm_http$Http$Request = F4(
+	function (a, b, c, d) {
+		return {verb: a, headers: b, url: c, body: d};
+	});
+var _evancz$elm_http$Http$Settings = F5(
+	function (a, b, c, d, e) {
+		return {timeout: a, onStart: b, onProgress: c, desiredResponseType: d, withCredentials: e};
+	});
+var _evancz$elm_http$Http$Response = F5(
+	function (a, b, c, d, e) {
+		return {status: a, statusText: b, headers: c, url: d, value: e};
+	});
+var _evancz$elm_http$Http$TODO_implement_blob_in_another_library = {ctor: 'TODO_implement_blob_in_another_library'};
+var _evancz$elm_http$Http$TODO_implement_file_in_another_library = {ctor: 'TODO_implement_file_in_another_library'};
+var _evancz$elm_http$Http$BodyBlob = function (a) {
+	return {ctor: 'BodyBlob', _0: a};
+};
+var _evancz$elm_http$Http$BodyFormData = {ctor: 'BodyFormData'};
+var _evancz$elm_http$Http$ArrayBuffer = {ctor: 'ArrayBuffer'};
+var _evancz$elm_http$Http$BodyString = function (a) {
+	return {ctor: 'BodyString', _0: a};
+};
+var _evancz$elm_http$Http$string = _evancz$elm_http$Http$BodyString;
+var _evancz$elm_http$Http$Empty = {ctor: 'Empty'};
+var _evancz$elm_http$Http$empty = _evancz$elm_http$Http$Empty;
+var _evancz$elm_http$Http$FileData = F3(
+	function (a, b, c) {
+		return {ctor: 'FileData', _0: a, _1: b, _2: c};
+	});
+var _evancz$elm_http$Http$BlobData = F3(
+	function (a, b, c) {
+		return {ctor: 'BlobData', _0: a, _1: b, _2: c};
+	});
+var _evancz$elm_http$Http$blobData = _evancz$elm_http$Http$BlobData;
+var _evancz$elm_http$Http$StringData = F2(
+	function (a, b) {
+		return {ctor: 'StringData', _0: a, _1: b};
+	});
+var _evancz$elm_http$Http$stringData = _evancz$elm_http$Http$StringData;
+var _evancz$elm_http$Http$Blob = function (a) {
+	return {ctor: 'Blob', _0: a};
+};
+var _evancz$elm_http$Http$Text = function (a) {
+	return {ctor: 'Text', _0: a};
+};
+var _evancz$elm_http$Http$RawNetworkError = {ctor: 'RawNetworkError'};
+var _evancz$elm_http$Http$RawTimeout = {ctor: 'RawTimeout'};
+var _evancz$elm_http$Http$BadResponse = F2(
+	function (a, b) {
+		return {ctor: 'BadResponse', _0: a, _1: b};
+	});
+var _evancz$elm_http$Http$UnexpectedPayload = function (a) {
+	return {ctor: 'UnexpectedPayload', _0: a};
+};
+var _evancz$elm_http$Http$handleResponse = F2(
+	function (handle, response) {
+		if ((_elm_lang$core$Native_Utils.cmp(200, response.status) < 1) && (_elm_lang$core$Native_Utils.cmp(response.status, 300) < 0)) {
+			var _p3 = response.value;
+			if (_p3.ctor === 'Text') {
+				return handle(_p3._0);
+			} else {
+				return _elm_lang$core$Task$fail(
+					_evancz$elm_http$Http$UnexpectedPayload('Response body is a blob, expecting a string.'));
+			}
+		} else {
+			return _elm_lang$core$Task$fail(
+				A2(_evancz$elm_http$Http$BadResponse, response.status, response.statusText));
+		}
+	});
+var _evancz$elm_http$Http$NetworkError = {ctor: 'NetworkError'};
+var _evancz$elm_http$Http$Timeout = {ctor: 'Timeout'};
+var _evancz$elm_http$Http$promoteError = function (rawError) {
+	var _p4 = rawError;
+	if (_p4.ctor === 'RawTimeout') {
+		return _evancz$elm_http$Http$Timeout;
+	} else {
+		return _evancz$elm_http$Http$NetworkError;
+	}
+};
+var _evancz$elm_http$Http$getString = function (url) {
+	var request = {
+		verb: 'GET',
+		headers: _elm_lang$core$Native_List.fromArray(
+			[]),
+		url: url,
+		body: _evancz$elm_http$Http$empty
+	};
+	return A2(
+		_elm_lang$core$Task$andThen,
+		A2(
+			_elm_lang$core$Task$mapError,
+			_evancz$elm_http$Http$promoteError,
+			A2(_evancz$elm_http$Http$send, _evancz$elm_http$Http$defaultSettings, request)),
+		_evancz$elm_http$Http$handleResponse(_elm_lang$core$Task$succeed));
+};
+var _evancz$elm_http$Http$fromJson = F2(
+	function (decoder, response) {
+		var decode = function (str) {
+			var _p5 = A2(_elm_lang$core$Json_Decode$decodeString, decoder, str);
+			if (_p5.ctor === 'Ok') {
+				return _elm_lang$core$Task$succeed(_p5._0);
+			} else {
+				return _elm_lang$core$Task$fail(
+					_evancz$elm_http$Http$UnexpectedPayload(_p5._0));
+			}
+		};
+		return A2(
+			_elm_lang$core$Task$andThen,
+			A2(_elm_lang$core$Task$mapError, _evancz$elm_http$Http$promoteError, response),
+			_evancz$elm_http$Http$handleResponse(decode));
+	});
+var _evancz$elm_http$Http$get = F2(
+	function (decoder, url) {
+		var request = {
+			verb: 'GET',
+			headers: _elm_lang$core$Native_List.fromArray(
+				[]),
+			url: url,
+			body: _evancz$elm_http$Http$empty
+		};
+		return A2(
+			_evancz$elm_http$Http$fromJson,
+			decoder,
+			A2(_evancz$elm_http$Http$send, _evancz$elm_http$Http$defaultSettings, request));
+	});
+var _evancz$elm_http$Http$post = F3(
+	function (decoder, url, body) {
+		var request = {
+			verb: 'POST',
+			headers: _elm_lang$core$Native_List.fromArray(
+				[]),
+			url: url,
+			body: body
+		};
+		return A2(
+			_evancz$elm_http$Http$fromJson,
+			decoder,
+			A2(_evancz$elm_http$Http$send, _evancz$elm_http$Http$defaultSettings, request));
+	});
 var _mgold$elm_random_pcg$Random_Pcg$toJson = function (_p0) {
 	var _p1 = _p0;
 	return _elm_lang$core$Json_Encode$list(
@@ -10248,27 +10604,451 @@ var _mgold$elm_random_pcg$Random_Pcg$fromJson = _elm_lang$core$Json_Decode$oneOf
 			A2(_elm_lang$core$Json_Decode$tuple1, _mgold$elm_random_pcg$Random_Pcg$initialSeed, _elm_lang$core$Json_Decode$int),
 			A2(_elm_lang$core$Json_Decode$map, _mgold$elm_random_pcg$Random_Pcg$initialSeed, _elm_lang$core$Json_Decode$int)
 		]));
-var _user$project$Main$symbolIntro = _elm_lang$core$Array$fromList(
-	_elm_lang$core$Native_List.fromArray(
-		['铝 （铝虫） 消化掉体内所有金属', '弯管合金 （滑行） 加快自己周围的时间流逝', '黄铜 （安抚者） 安抚周遭人的情绪', '青铜 （搜寻者） 听到金属脉动', '镉 （脉动） 延缓自己周围的时间流逝', '铬 （水蛭） 藉由碰触，清空另一位镕金术师的所有金属存量', '红铜 （烟阵） 隐藏金属脉动', '硬铝 （硬铝虫） 燃尽其他正在燃烧的金属', '电金 （预言师） 看到自己未来的可能道路', '金 （命师） 看到过去的自己', '铁 （扯手） 拉引附近金属', '镍铬 （镍爆） 藉由碰触，烧尽另一位镕金术师的所有金属存量', '白镴 （打手） 增加身体机能', '钢 （射币） 钢推附近的金属', '锡 （锡眼） 增加五感的敏锐度', '锌 （煽动者） 煽动附近的人的情绪']));
+var _user$project$MistbornPairingI18n$Translations = F2(
+	function (a, b) {
+		return {backButton: a, symbolIntro: b};
+	});
+var _user$project$MistbornPairingI18n$Model = F2(
+	function (a, b) {
+		return {lang: a, translations: b};
+	});
+var _user$project$MistbornPairingI18n$FetchFail = F2(
+	function (a, b) {
+		return {ctor: 'FetchFail', _0: a, _1: b};
+	});
+var _user$project$MistbornPairingI18n$FetchSucceed = function (a) {
+	return {ctor: 'FetchSucceed', _0: a};
+};
+var _user$project$MistbornPairingI18n$fetch = function (lang) {
+	return A3(
+		_elm_lang$core$Task$perform,
+		_user$project$MistbornPairingI18n$FetchFail(lang),
+		_user$project$MistbornPairingI18n$FetchSucceed,
+		A3(
+			_elm_lang$core$Basics$flip,
+			_evancz$elm_http$Http$get,
+			A2(
+				_elm_lang$core$Basics_ops['++'],
+				'mistborn-pairing.',
+				A2(_elm_lang$core$Basics_ops['++'], lang, '.json')),
+			A3(
+				_elm_lang$core$Json_Decode$object2,
+				_user$project$MistbornPairingI18n$Translations,
+				A2(_elm_lang$core$Json_Decode_ops[':='], 'backButton', _elm_lang$core$Json_Decode$string),
+				A2(
+					_elm_lang$core$Json_Decode_ops[':='],
+					'symbolIntro',
+					_elm_lang$core$Json_Decode$array(_elm_lang$core$Json_Decode$string)))));
+};
+var _user$project$MistbornPairingI18n$init = function (lang) {
+	return {
+		ctor: '_Tuple2',
+		_0: {
+			lang: lang,
+			translations: {backButton: '<<', symbolIntro: _elm_lang$core$Array$empty}
+		},
+		_1: _user$project$MistbornPairingI18n$fetch(lang)
+	};
+};
+var _user$project$MistbornPairingI18n$Fetch = function (a) {
+	return {ctor: 'Fetch', _0: a};
+};
+var _user$project$MistbornPairingI18n$update = F2(
+	function (msg, model) {
+		var _p0 = msg;
+		switch (_p0.ctor) {
+			case 'Fetch':
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: _user$project$MistbornPairingI18n$fetch(_p0._0)
+				};
+			case 'FetchSucceed':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{translations: _p0._0}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			default:
+				var msg = _elm_lang$core$Basics$always(
+					_user$project$MistbornPairingI18n$Fetch(_p0._0));
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: A3(
+						_elm_lang$core$Task$perform,
+						msg,
+						msg,
+						_elm_lang$core$Process$sleep(5 * _elm_lang$core$Time$second))
+				};
+		}
+	});
+var _user$project$MistbornPairingI18n$view = F2(
+	function (model, symbol) {
+		var padding = _elm_lang$html$Html_Attributes$style(
+			_elm_lang$core$Native_List.fromArray(
+				[
+					{ctor: '_Tuple2', _0: 'padding', _1: '0 20px'}
+				]));
+		return A2(
+			_elm_lang$html$Html$div,
+			_elm_lang$core$Native_List.fromArray(
+				[
+					_elm_lang$html$Html_Attributes$style(
+					_elm_lang$core$Native_List.fromArray(
+						[
+							{ctor: '_Tuple2', _0: 'z-index', _1: '100'},
+							{ctor: '_Tuple2', _0: 'position', _1: 'absolute'},
+							{ctor: '_Tuple2', _0: 'width', _1: '100%'}
+						]))
+				]),
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A2(
+					_elm_lang$html$Html$a,
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html_Attributes$href('index.html'),
+							padding
+						]),
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html$text(model.translations.backButton)
+						])),
+					A2(
+					_elm_lang$html$Html$a,
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html_Attributes$href('javascript:void()'),
+							padding,
+							_elm_lang$html$Html_Events$onClick(
+							_user$project$MistbornPairingI18n$Fetch('en'))
+						]),
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html$text('English')
+						])),
+					_elm_lang$html$Html$text('|'),
+					A2(
+					_elm_lang$html$Html$a,
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html_Attributes$href('javascript:void()'),
+							padding,
+							_elm_lang$html$Html_Events$onClick(
+							_user$project$MistbornPairingI18n$Fetch('zh'))
+						]),
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html$text('中文')
+						])),
+					A2(
+					_elm_lang$html$Html$h2,
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html_Attributes$style(
+							_elm_lang$core$Native_List.fromArray(
+								[
+									{ctor: '_Tuple2', _0: 'color', _1: 'blue'},
+									{ctor: '_Tuple2', _0: 'text-align', _1: 'center'}
+								]))
+						]),
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$html$Html$text(
+							A2(
+								_elm_lang$core$Maybe$withDefault,
+								'',
+								A3(
+									_elm_lang$core$Basics$flip,
+									_elm_lang$core$Array$get,
+									model.translations.symbolIntro,
+									A2(_elm_lang$core$Maybe$withDefault, -1, symbol))))
+						]))
+				]));
+	});
+var _user$project$Main$symbols = 16;
+var _user$project$Main$resetTiles = F2(
+	function (coords, model) {
+		var newBoard = A3(
+			_elm_lang$core$List$foldl,
+			A2(_elm_lang$core$Basics$flip, _elm_lang$core$Dict$insert, -1),
+			model.tiles,
+			coords);
+		return _elm_lang$core$Native_Utils.update(
+			model,
+			{tiles: newBoard});
+	});
 var _user$project$Main$getTile = function (model) {
 	return function (_p0) {
 		return A2(
 			_elm_lang$core$Maybe$withDefault,
 			-1,
-			A3(_elm_lang$core$Basics$flip, _elm_lang$core$Array$get, model.tiles, _p0));
+			A3(_elm_lang$core$Basics$flip, _elm_lang$core$Dict$get, model.tiles, _p0));
 	};
 };
+var _user$project$Main$checkPairing$ = F3(
+	function (model, pos, pos$) {
+		var connect = F2(
+			function (i, i$) {
+				return _elm_lang$core$Native_List.range(
+					A2(_elm_lang$core$Basics$min, i, i$),
+					A2(_elm_lang$core$Basics$max, i, i$));
+			});
+		var checkLShape = F6(
+			function (makeCoord, x, y, x$, y$, x$$) {
+				var vertPath = A2(connect, y, y$);
+				var vertPath$ = _elm_lang$core$Native_Utils.eq(x$$, x$) ? A2(
+					_elm_lang$core$List$filter,
+					F2(
+						function (x, y) {
+							return !_elm_lang$core$Native_Utils.eq(x, y);
+						})(y$),
+					vertPath) : vertPath;
+				return (A2(
+					_elm_lang$core$List$any,
+					F2(
+						function (x, y) {
+							return !_elm_lang$core$Native_Utils.eq(x, y);
+						})(-1),
+					A3(
+						_elm_lang$core$Basics$flip,
+						_elm_lang$core$List$map,
+						vertPath$,
+						function (_p1) {
+							return A2(
+								_user$project$Main$getTile,
+								model,
+								A2(makeCoord, x$$, _p1));
+						})) || A2(
+					_elm_lang$core$List$any,
+					F2(
+						function (x, y) {
+							return !_elm_lang$core$Native_Utils.eq(x, y);
+						})(-1),
+					A2(
+						_elm_lang$core$List$map,
+						function (_p2) {
+							return A2(
+								_user$project$Main$getTile,
+								model,
+								A3(_elm_lang$core$Basics$flip, makeCoord, y$, _p2));
+						},
+						A2(
+							_elm_lang$core$List$filter,
+							F2(
+								function (x, y) {
+									return !_elm_lang$core$Native_Utils.eq(x, y);
+								})(x$),
+							A2(connect, x$, x$$))))) ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just(
+					_elm_lang$core$Native_List.fromArray(
+						[
+							A2(makeCoord, x, y),
+							A2(makeCoord, x$$, y),
+							A2(makeCoord, x$$, y$),
+							A2(makeCoord, x$, y$)
+						]));
+			});
+		var checkPaths = F6(
+			function (makeCoord, x, y, x$, y$, dx) {
+				var topPath = A3(
+					_elm_lang$core$Basics$flip,
+					_elm_community$list_extra$List_Extra$takeWhile,
+					dx,
+					function (_p3) {
+						return A2(
+							F2(
+								function (x, y) {
+									return _elm_lang$core$Native_Utils.eq(x, y);
+								}),
+							-1,
+							A2(
+								_user$project$Main$getTile,
+								model,
+								A3(
+									_elm_lang$core$Basics$flip,
+									makeCoord,
+									y,
+									A2(
+										F2(
+											function (x, y) {
+												return x + y;
+											}),
+										x,
+										_p3))));
+					});
+				return _elm_lang$core$Maybe$oneOf(
+					A3(
+						_elm_lang$core$Basics$flip,
+						_elm_lang$core$List$map,
+						topPath,
+						function (_p4) {
+							return A6(
+								checkLShape,
+								makeCoord,
+								x,
+								y,
+								x$,
+								y$,
+								A2(
+									F2(
+										function (x, y) {
+											return x + y;
+										}),
+									x,
+									_p4));
+						}));
+			});
+		var checkPath$ = F6(
+			function (makeCoord, dim, x, y, x$, y$) {
+				var simple = ((!_elm_lang$core$Native_Utils.eq(y, y$)) || A2(
+					_elm_lang$core$List$any,
+					F2(
+						function (x, y) {
+							return !_elm_lang$core$Native_Utils.eq(x, y);
+						})(-1),
+					A3(
+						_elm_lang$core$Basics$flip,
+						_elm_lang$core$List$map,
+						_elm_lang$core$Native_List.range(x + 1, x$ - 1),
+						function (_p5) {
+							return A2(
+								_user$project$Main$getTile,
+								model,
+								A3(_elm_lang$core$Basics$flip, makeCoord, y, _p5));
+						}))) ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just(
+					_elm_lang$core$Native_List.fromArray(
+						[
+							A2(makeCoord, x, y),
+							A2(makeCoord, x$, y$)
+						]));
+				if (!_elm_lang$core$Native_Utils.eq(simple, _elm_lang$core$Maybe$Nothing)) {
+					return simple;
+				} else {
+					var right = _elm_lang$core$Native_List.range(1, (dim + 1) - x);
+					var left = A2(
+						_elm_lang$core$List$map,
+						_elm_lang$core$Basics$negate,
+						_elm_lang$core$Native_List.range(1, x + 1));
+					return _elm_lang$core$Maybe$oneOf(
+						_elm_lang$core$Native_List.fromArray(
+							[
+								A6(checkPaths, makeCoord, x, y, x$, y$, left),
+								A6(checkPaths, makeCoord, x, y, x$, y$, right)
+							]));
+				}
+			});
+		var dimSum = model.rows + model.cols;
+		var flipTuple = _elm_lang$core$Basics$uncurry(
+			_elm_lang$core$Basics$flip(
+				F2(
+					function (v0, v1) {
+						return {ctor: '_Tuple2', _0: v0, _1: v1};
+					})));
+		var checkPath = F5(
+			function (lastPass, makeCoord, dim, pos, pos$) {
+				checkPath:
+				while (true) {
+					var _p6 = pos$;
+					var x$ = _p6._0;
+					var y$ = _p6._1;
+					var _p7 = pos;
+					var x = _p7._0;
+					var y = _p7._1;
+					if (_elm_lang$core$Native_Utils.cmp(x, x$) > 0) {
+						var _v0 = lastPass,
+							_v1 = makeCoord,
+							_v2 = dim,
+							_v3 = pos$,
+							_v4 = pos;
+						lastPass = _v0;
+						makeCoord = _v1;
+						dim = _v2;
+						pos = _v3;
+						pos$ = _v4;
+						continue checkPath;
+					} else {
+						return _elm_lang$core$Maybe$oneOf(
+							_elm_lang$core$Native_List.fromArray(
+								[
+									A6(checkPath$, makeCoord, dim, x, y, x$, y$),
+									lastPass ? _elm_lang$core$Maybe$Nothing : A5(
+									checkPath,
+									true,
+									_elm_lang$core$Basics$flip(makeCoord),
+									dimSum - dim,
+									flipTuple(pos),
+									flipTuple(pos$))
+								]));
+					}
+				}
+			});
+		return A5(
+			checkPath,
+			false,
+			F2(
+				function (v0, v1) {
+					return {ctor: '_Tuple2', _0: v0, _1: v1};
+				}),
+			model.cols,
+			pos,
+			pos$);
+	});
+var _user$project$Main$hasPairs = F2(
+	function (model, tiles) {
+		var check = F2(
+			function (pos, pos$) {
+				return !_elm_lang$core$Native_Utils.eq(
+					A3(_user$project$Main$checkPairing$, model, pos, pos$),
+					_elm_lang$core$Maybe$Nothing);
+			});
+		var checkPoses = function (poses) {
+			var _p8 = poses;
+			if (_p8.ctor === '[]') {
+				return false;
+			} else {
+				var _p9 = _p8._1;
+				return A2(
+					_elm_lang$core$List$any,
+					check(_p8._0),
+					_p9) || checkPoses(_p9);
+			}
+		};
+		var posesOf = function (sym) {
+			return A2(
+				_elm_lang$core$List$map,
+				_elm_lang$core$Basics$fst,
+				A2(
+					_elm_lang$core$List$filter,
+					function (_p10) {
+						return A2(
+							F2(
+								function (x, y) {
+									return _elm_lang$core$Native_Utils.eq(x, y);
+								}),
+							sym,
+							_elm_lang$core$Basics$snd(_p10));
+					},
+					_elm_lang$core$Dict$toList(tiles)));
+		};
+		var syms = _elm_lang$core$Native_List.range(0, _user$project$Main$symbols - 1);
+		return A2(
+			_elm_lang$core$List$any,
+			checkPoses,
+			A2(_elm_lang$core$List$map, posesOf, syms));
+	});
 var _user$project$Main$showPath = function (model) {
-	var makePoint = function (_p1) {
-		var _p2 = _p1;
+	var makePoint = function (_p11) {
+		var _p12 = _p11;
 		return A2(
 			_elm_lang$core$Basics_ops['++'],
-			_elm_lang$core$Basics$toString((_p2._0 * 80) + 40),
+			_elm_lang$core$Basics$toString((_p12._0 * 80) + 40),
 			A2(
 				_elm_lang$core$Basics_ops['++'],
 				',',
-				_elm_lang$core$Basics$toString((_p2._1 * 105) + 53)));
+				_elm_lang$core$Basics$toString((_p12._1 * 105) + 53)));
 	};
 	var makePoints = A2(
 		_elm_lang$core$String$join,
@@ -10289,66 +11069,42 @@ var _user$project$Main$showPath = function (model) {
 				[]))
 		]);
 };
-var _user$project$Main$indexOf = F3(
-	function (model, x, y) {
-		return (y * (model.cols + 2)) + x;
-	});
-var _user$project$Main$resetTiles = F2(
-	function (coords, model) {
-		resetTiles:
-		while (true) {
-			var _p3 = coords;
-			if (_p3.ctor === '::') {
-				var _v2 = _p3._1,
-					_v3 = _elm_lang$core$Native_Utils.update(
-					model,
-					{
-						tiles: A3(
-							_elm_lang$core$Array$set,
-							A3(_user$project$Main$indexOf, model, _p3._0._0, _p3._0._1),
-							-1,
-							model.tiles)
-					});
-				coords = _v2;
-				model = _v3;
-				continue resetTiles;
-			} else {
-				return model;
-			}
-		}
-	});
-var _user$project$Main$coordOf = F2(
-	function (model, i) {
-		return {
-			ctor: '_Tuple2',
-			_0: A2(_elm_lang$core$Basics_ops['%'], i, model.cols + 2),
-			_1: (i / (model.cols + 2)) | 0
-		};
-	});
 var _user$project$Main$convertBoard = F2(
 	function (model, tiles) {
-		var padding = A2(_elm_lang$core$List$repeat, model.cols + 2, -1);
-		var padChunks = function (chunk) {
-			return A2(
-				_elm_lang$core$List_ops['::'],
-				-1,
-				A2(
-					_elm_lang$core$Basics_ops['++'],
-					chunk,
-					_elm_lang$core$Native_List.fromArray(
-						[-1])));
-		};
-		var chunks = A2(_elm_community$list_split$List_Split$chunksOfLeft, model.cols, tiles);
-		return _elm_lang$core$Array$fromList(
+		var ys = A2(
+			_elm_lang$core$List$concatMap,
+			_elm_lang$core$List$repeat(model.cols),
+			_elm_lang$core$Native_List.range(1, model.rows));
+		var xs = _elm_lang$core$List$concat(
 			A2(
-				_elm_lang$core$Basics_ops['++'],
-				padding,
-				A2(
-					_elm_lang$core$Basics_ops['++'],
-					A2(_elm_lang$core$List$concatMap, padChunks, chunks),
-					padding)));
+				_elm_lang$core$List$repeat,
+				model.rows,
+				_elm_lang$core$Native_List.range(1, model.cols)));
+		return _elm_lang$core$Dict$fromList(
+			A4(
+				_elm_lang$core$List$map3,
+				F3(
+					function (x, y, t) {
+						return {
+							ctor: '_Tuple2',
+							_0: {ctor: '_Tuple2', _0: x, _1: y},
+							_1: t
+						};
+					}),
+				xs,
+				ys,
+				tiles));
 	});
-var _user$project$Main$generateBoard = function (halfTiles) {
+var _user$project$Main$setTiles = function (board) {
+	return function (_p13) {
+		return _elm_lang$core$Dict$fromList(
+			A2(
+				_elm_community$list_extra$List_Extra$zip,
+				_elm_lang$core$Dict$keys(board),
+				_p13));
+	};
+};
+var _user$project$Main$shuffle = function (l) {
 	var pick = F2(
 		function (n, l) {
 			return {
@@ -10364,450 +11120,97 @@ var _user$project$Main$generateBoard = function (halfTiles) {
 					A2(_elm_lang$core$List$drop, n + 1, l))
 			};
 		});
-	var shuffle = function (_p4) {
-		var _p5 = _p4;
-		var _p9 = _p5._1;
-		var _p8 = _p5._0;
-		var len = _elm_lang$core$List$length(_p9);
+	var shuffle$ = function (_p14) {
+		var _p15 = _p14;
+		var _p19 = _p15._1;
+		var _p18 = _p15._0;
+		var len = _elm_lang$core$List$length(_p19);
 		return _elm_lang$core$Native_Utils.eq(len, 0) ? _mgold$elm_random_pcg$Random_Pcg$constant(
-			{ctor: '_Tuple2', _0: _p8, _1: _p9}) : A2(
+			{ctor: '_Tuple2', _0: _p18, _1: _p19}) : A2(
 			_mgold$elm_random_pcg$Random_Pcg$andThen,
 			A2(
 				_mgold$elm_random_pcg$Random_Pcg$map,
-				A2(_elm_lang$core$Basics$flip, pick, _p9),
+				A2(_elm_lang$core$Basics$flip, pick, _p19),
 				A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, len - 1)),
-			function (_p6) {
-				var _p7 = _p6;
-				return shuffle(
+			function (_p16) {
+				var _p17 = _p16;
+				return shuffle$(
 					{
 						ctor: '_Tuple2',
-						_0: A2(_elm_lang$core$List_ops['::'], _p7._0, _p8),
-						_1: _p7._1
+						_0: A2(_elm_lang$core$List_ops['::'], _p17._0, _p18),
+						_1: _p17._1
 					});
 			});
 	};
-	var tiles = A2(_elm_lang$core$Basics_ops['++'], halfTiles, halfTiles);
 	return A2(
 		_mgold$elm_random_pcg$Random_Pcg$map,
 		_elm_lang$core$Basics$fst,
-		shuffle(
+		shuffle$(
 			{
 				ctor: '_Tuple2',
 				_0: _elm_lang$core$Native_List.fromArray(
 					[]),
-				_1: tiles
+				_1: l
 			}));
 };
+var _user$project$Main$generateBoard = function (halfTiles) {
+	return _user$project$Main$shuffle(
+		A2(_elm_lang$core$Basics_ops['++'], halfTiles, halfTiles));
+};
+var _user$project$Main$runGenerator = F2(
+	function (f, gen) {
+		return A2(
+			_elm_lang$core$Random$generate,
+			f,
+			A2(
+				_elm_lang$core$Random$map,
+				function (_p20) {
+					return _elm_lang$core$Basics$fst(
+						A2(
+							_mgold$elm_random_pcg$Random_Pcg$step,
+							gen,
+							_mgold$elm_random_pcg$Random_Pcg$initialSeed(_p20)));
+				},
+				A2(_elm_lang$core$Random$int, _elm_lang$core$Random$minInt, _elm_lang$core$Random$maxInt)));
+	});
 var _user$project$Main$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$none;
 };
-var _user$project$Main$Model = F6(
-	function (a, b, c, d, e, f) {
-		return {rows: a, cols: b, tiles: c, hoverAt: d, clicked: e, path: f};
+var _user$project$Main$Model = F7(
+	function (a, b, c, d, e, f, g) {
+		return {rows: a, cols: b, tiles: c, hoverAt: d, clicked: e, path: f, i18n: g};
 	});
+var _user$project$Main$OnI18n = function (a) {
+	return {ctor: 'OnI18n', _0: a};
+};
 var _user$project$Main$Paired = function (a) {
 	return {ctor: 'Paired', _0: a};
 };
-var _user$project$Main$checkPairing = F5(
-	function (model, x, y, x$, y$) {
-		var connect = F2(
-			function (i, i$) {
-				return _elm_lang$core$Native_List.range(
-					A2(_elm_lang$core$Basics$min, i, i$),
-					A2(_elm_lang$core$Basics$max, i, i$));
-			});
-		var checkLShape = F7(
-			function (makeCoord, calcIndex, x, y, x$, y$, x$$) {
-				var vertPath = A2(connect, y, y$);
-				var vertPath$ = A2(
-					_elm_lang$core$Debug$log,
-					'vert path',
-					_elm_lang$core$Native_Utils.eq(x$$, x$) ? A2(
-						_elm_lang$core$List$filter,
-						F2(
-							function (x, y) {
-								return !_elm_lang$core$Native_Utils.eq(x, y);
-							})(y$),
-						vertPath) : vertPath);
-				return (A2(
-					_elm_lang$core$List$any,
-					F2(
-						function (x, y) {
-							return !_elm_lang$core$Native_Utils.eq(x, y);
-						})(-1),
-					A2(
-						_elm_lang$core$List$map,
-						function (_p10) {
-							return A2(
-								_user$project$Main$getTile,
-								model,
-								A2(calcIndex, x$$, _p10));
-						},
-						vertPath$)) || A2(
-					_elm_lang$core$List$any,
-					F2(
-						function (x, y) {
-							return !_elm_lang$core$Native_Utils.eq(x, y);
-						})(-1),
-					A2(
-						_elm_lang$core$List$map,
-						function (_p11) {
-							return A2(
-								_user$project$Main$getTile,
-								model,
-								A3(_elm_lang$core$Basics$flip, calcIndex, y$, _p11));
-						},
-						A2(
-							_elm_lang$core$List$filter,
-							F2(
-								function (x, y) {
-									return !_elm_lang$core$Native_Utils.eq(x, y);
-								})(x$),
-							A2(connect, x$, x$$))))) ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just(
-					_elm_lang$core$Native_List.fromArray(
-						[
-							A2(makeCoord, x, y),
-							A2(makeCoord, x$$, y),
-							A2(makeCoord, x$$, y$),
-							A2(makeCoord, x$, y$)
-						]));
-			});
-		var checkPaths = F7(
-			function (makeCoord, calcIndex, x, y, x$, y$, dx) {
-				var topPath = A2(
-					_elm_lang$core$Debug$log,
-					'top path',
-					A2(
-						_elm_community$list_extra$List_Extra$takeWhile,
-						function (_p12) {
-							return A2(
-								F2(
-									function (x, y) {
-										return _elm_lang$core$Native_Utils.eq(x, y);
-									}),
-								-1,
-								A2(
-									_user$project$Main$getTile,
-									model,
-									A3(
-										_elm_lang$core$Basics$flip,
-										calcIndex,
-										y,
-										A2(
-											F2(
-												function (x, y) {
-													return x + y;
-												}),
-											x,
-											_p12))));
-						},
-						dx));
-				return _elm_lang$core$Maybe$oneOf(
-					A2(
-						_elm_lang$core$List$map,
-						function (_p13) {
-							return A7(
-								checkLShape,
-								makeCoord,
-								calcIndex,
-								x,
-								y,
-								x$,
-								y$,
-								A2(
-									F2(
-										function (x, y) {
-											return x + y;
-										}),
-									x,
-									_p13));
-						},
-						topPath));
-			});
-		var checkPath$ = F7(
-			function (makeCoord, calcIndex, dim, x, y, x$, y$) {
-				var simple = ((!_elm_lang$core$Native_Utils.eq(y, y$)) || A2(
-					_elm_lang$core$List$any,
-					F2(
-						function (x, y) {
-							return !_elm_lang$core$Native_Utils.eq(x, y);
-						})(-1),
-					A2(
-						_elm_lang$core$Debug$log,
-						'blocking',
-						A2(
-							_elm_lang$core$List$map,
-							function (_p14) {
-								return A2(
-									_user$project$Main$getTile,
-									model,
-									A3(_elm_lang$core$Basics$flip, calcIndex, y, _p14));
-							},
-							_elm_lang$core$Native_List.range(x + 1, x$ - 1))))) ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just(
-					_elm_lang$core$Native_List.fromArray(
-						[
-							A2(makeCoord, x, y),
-							A2(makeCoord, x$, y$)
-						]));
-				if (!_elm_lang$core$Native_Utils.eq(simple, _elm_lang$core$Maybe$Nothing)) {
-					return simple;
-				} else {
-					var right = _elm_lang$core$Native_List.range(1, (dim + 1) - x);
-					var left = A2(
-						_elm_lang$core$List$map,
-						_elm_lang$core$Basics$negate,
-						_elm_lang$core$Native_List.range(1, x + 1));
-					return _elm_lang$core$Maybe$oneOf(
-						_elm_lang$core$Native_List.fromArray(
-							[
-								A7(checkPaths, makeCoord, calcIndex, x, y, x$, y$, left),
-								A7(checkPaths, makeCoord, calcIndex, x, y, x$, y$, right)
-							]));
-				}
-			});
-		var dimSum = model.rows + model.cols;
-		var checkPath = F8(
-			function (lastPass, makeCoord, calcIndex, dim, x, y, x$, y$) {
-				checkPath:
-				while (true) {
-					if (_elm_lang$core$Native_Utils.cmp(x, x$) > 0) {
-						var _v6 = lastPass,
-							_v7 = makeCoord,
-							_v8 = calcIndex,
-							_v9 = dim,
-							_v10 = x$,
-							_v11 = y$,
-							_v12 = x,
-							_v13 = y;
-						lastPass = _v6;
-						makeCoord = _v7;
-						calcIndex = _v8;
-						dim = _v9;
-						x = _v10;
-						y = _v11;
-						x$ = _v12;
-						y$ = _v13;
-						continue checkPath;
-					} else {
-						var _p15 = A7(checkPath$, makeCoord, calcIndex, dim, x, y, x$, y$);
-						if (_p15.ctor === 'Just') {
-							var msg = _elm_lang$core$Basics$always(
-								_user$project$Main$Paired(model.clicked));
-							return {
-								ctor: '_Tuple2',
-								_0: _elm_lang$core$Native_Utils.update(
-									model,
-									{path: _p15._0}),
-								_1: A3(
-									_elm_lang$core$Task$perform,
-									msg,
-									msg,
-									_elm_lang$core$Process$sleep(1 * _elm_lang$core$Time$second))
-							};
-						} else {
-							if (lastPass) {
-								return {
-									ctor: '_Tuple2',
-									_0: _elm_lang$core$Native_Utils.update(
-										model,
-										{
-											clicked: _elm_lang$core$Native_List.fromArray(
-												[])
-										}),
-									_1: _elm_lang$core$Platform_Cmd$none
-								};
-							} else {
-								var _v15 = true,
-									_v16 = _elm_lang$core$Basics$flip(makeCoord),
-									_v17 = _elm_lang$core$Basics$flip(calcIndex),
-									_v18 = dimSum - dim,
-									_v19 = y,
-									_v20 = x,
-									_v21 = y$,
-									_v22 = x$;
-								lastPass = _v15;
-								makeCoord = _v16;
-								calcIndex = _v17;
-								dim = _v18;
-								x = _v19;
-								y = _v20;
-								x$ = _v21;
-								y$ = _v22;
-								continue checkPath;
-							}
-						}
-					}
-				}
-			});
-		return A8(
-			checkPath,
-			false,
-			F2(
-				function (v0, v1) {
-					return {ctor: '_Tuple2', _0: v0, _1: v1};
-				}),
-			_user$project$Main$indexOf(model),
-			model.cols,
-			x,
-			y,
-			x$,
-			y$);
-	});
-var _user$project$Main$update = F2(
-	function (msg, model) {
-		var _p16 = msg;
-		switch (_p16.ctor) {
-			case 'GenerateBoard':
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{
-							tiles: A2(_user$project$Main$convertBoard, model, _p16._0)
-						}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'MouseEnter':
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{
-							hoverAt: _elm_lang$core$Maybe$Just(
-								{ctor: '_Tuple2', _0: _p16._0, _1: _p16._1})
-						}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'MouseLeave':
-				var coord = _elm_lang$core$Native_Utils.eq(
-					model.hoverAt,
-					_elm_lang$core$Maybe$Just(
-						{ctor: '_Tuple2', _0: _p16._0, _1: _p16._1})) ? _elm_lang$core$Maybe$Nothing : model.hoverAt;
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{hoverAt: coord}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'ClickOn':
-				var _p21 = _p16._1;
-				var _p20 = _p16._0;
-				var setClicked = function (m) {
-					return _elm_lang$core$Native_Utils.update(
-						m,
-						{
-							clicked: _elm_lang$core$Native_List.fromArray(
-								[
-									{ctor: '_Tuple2', _0: _p20, _1: _p21}
-								])
-						});
-				};
-				var _p17 = model.clicked;
-				if (((_p17.ctor === '::') && (_p17._0.ctor === '_Tuple2')) && (_p17._1.ctor === '[]')) {
-					var _p19 = _p17._0._1;
-					var _p18 = _p17._0._0;
-					if (_elm_lang$core$Native_Utils.eq(_p20, _p18) && _elm_lang$core$Native_Utils.eq(_p21, _p19)) {
-						return {
-							ctor: '_Tuple2',
-							_0: _elm_lang$core$Native_Utils.update(
-								model,
-								{
-									clicked: _elm_lang$core$Native_List.fromArray(
-										[])
-								}),
-							_1: _elm_lang$core$Platform_Cmd$none
-						};
-					} else {
-						var t$ = A2(
-							_user$project$Main$getTile,
-							model,
-							A3(_user$project$Main$indexOf, model, _p18, _p19));
-						var t = A2(
-							_user$project$Main$getTile,
-							model,
-							A3(_user$project$Main$indexOf, model, _p20, _p21));
-						return (!_elm_lang$core$Native_Utils.eq(t, t$)) ? {
-							ctor: '_Tuple2',
-							_0: setClicked(model),
-							_1: _elm_lang$core$Platform_Cmd$none
-						} : A5(
-							_user$project$Main$checkPairing,
-							_elm_lang$core$Native_Utils.update(
-								model,
-								{
-									clicked: _elm_lang$core$Native_List.fromArray(
-										[
-											{ctor: '_Tuple2', _0: _p20, _1: _p21},
-											{ctor: '_Tuple2', _0: _p18, _1: _p19}
-										])
-								}),
-							_p20,
-							_p21,
-							_p18,
-							_p19);
-					}
-				} else {
-					return {
-						ctor: '_Tuple2',
-						_0: A2(
-							_user$project$Main$resetTiles,
-							model.clicked,
-							setClicked(
-								_elm_lang$core$Native_Utils.update(
-									model,
-									{
-										path: _elm_lang$core$Native_List.fromArray(
-											[])
-									}))),
-						_1: _elm_lang$core$Platform_Cmd$none
-					};
-				}
-			default:
-				return {
-					ctor: '_Tuple2',
-					_0: (!_elm_lang$core$Native_Utils.eq(model.clicked, _p16._0)) ? model : A2(
-						_user$project$Main$resetTiles,
-						model.clicked,
-						_elm_lang$core$Native_Utils.update(
-							model,
-							{
-								clicked: _elm_lang$core$Native_List.fromArray(
-									[])
-							})),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-		}
-	});
-var _user$project$Main$ClickOn = F2(
-	function (a, b) {
-		return {ctor: 'ClickOn', _0: a, _1: b};
-	});
-var _user$project$Main$MouseLeave = F2(
-	function (a, b) {
-		return {ctor: 'MouseLeave', _0: a, _1: b};
-	});
-var _user$project$Main$MouseEnter = F2(
-	function (a, b) {
-		return {ctor: 'MouseEnter', _0: a, _1: b};
-	});
-var _user$project$Main$showTile = F3(
-	function (model, i, t) {
-		var _p22 = A2(_user$project$Main$coordOf, model, i);
-		var x = _p22._0;
-		var y = _p22._1;
-		var isClicked = A2(
-			_elm_lang$core$List$member,
-			{ctor: '_Tuple2', _0: x, _1: y},
-			model.clicked);
+var _user$project$Main$ClickOn = function (a) {
+	return {ctor: 'ClickOn', _0: a};
+};
+var _user$project$Main$MouseLeave = function (a) {
+	return {ctor: 'MouseLeave', _0: a};
+};
+var _user$project$Main$MouseEnter = function (a) {
+	return {ctor: 'MouseEnter', _0: a};
+};
+var _user$project$Main$showTile = F2(
+	function (model, _p21) {
+		var _p22 = _p21;
+		var _p25 = _p22._1;
+		var _p24 = _p22._0;
 		var isHoverAt = _elm_lang$core$Native_Utils.eq(
 			model.hoverAt,
-			_elm_lang$core$Maybe$Just(
-				{ctor: '_Tuple2', _0: x, _1: y}));
+			_elm_lang$core$Maybe$Just(_p24));
+		var isClicked = A2(_elm_lang$core$List$member, _p24, model.clicked);
 		var border = isClicked ? 'inset 3px gold' : (isHoverAt ? 'inset 3px blue' : 'solid 1px black');
 		var width = (isClicked || isHoverAt) ? '70px' : '75px';
 		var height = (isClicked || isHoverAt) ? '95px' : '100px';
-		return (_elm_lang$core$Native_Utils.cmp(t, 0) < 0) ? _elm_lang$core$Native_List.fromArray(
+		var _p23 = _p24;
+		var x = _p23._0;
+		var y = _p23._1;
+		return (_elm_lang$core$Native_Utils.cmp(_p25, 0) < 0) ? _elm_lang$core$Native_List.fromArray(
 			[]) : _elm_lang$core$Native_List.fromArray(
 			[
 				A2(
@@ -10817,7 +11220,7 @@ var _user$project$Main$showTile = F3(
 						_elm_lang$html$Html_Attributes$src(
 						A2(
 							_elm_lang$core$Basics_ops['++'],
-							_elm_lang$core$Basics$toString(t),
+							_elm_lang$core$Basics$toString(_p25),
 							'.svg')),
 						_elm_lang$html$Html_Attributes$style(
 						_elm_lang$core$Native_List.fromArray(
@@ -10846,11 +11249,11 @@ var _user$project$Main$showTile = F3(
 								{ctor: '_Tuple2', _0: 'background', _1: 'white'}
 							])),
 						_elm_lang$html$Html_Events$onClick(
-						A2(_user$project$Main$ClickOn, x, y)),
+						_user$project$Main$ClickOn(_p24)),
 						_elm_lang$html$Html_Events$onMouseEnter(
-						A2(_user$project$Main$MouseEnter, x, y)),
+						_user$project$Main$MouseEnter(_p24)),
 						_elm_lang$html$Html_Events$onMouseLeave(
-						A2(_user$project$Main$MouseLeave, x, y))
+						_user$project$Main$MouseLeave(_p24))
 					]),
 				_elm_lang$core$Native_List.fromArray(
 					[]))
@@ -10882,55 +11285,15 @@ var _user$project$Main$view = function (model) {
 		_elm_lang$core$Native_List.fromArray(
 			[
 				A2(
-				_elm_lang$html$Html$a,
-				_elm_lang$core$Native_List.fromArray(
-					[
-						_elm_lang$html$Html_Attributes$href('index.html'),
-						_elm_lang$html$Html_Attributes$style(
-						_elm_lang$core$Native_List.fromArray(
-							[
-								{ctor: '_Tuple2', _0: 'z-index', _1: '100'},
-								{ctor: '_Tuple2', _0: 'top', _1: '0'},
-								{ctor: '_Tuple2', _0: 'left', _1: '0'},
-								{ctor: '_Tuple2', _0: 'position', _1: 'absolute'}
-							]))
-					]),
-				_elm_lang$core$Native_List.fromArray(
-					[
-						_elm_lang$html$Html$text('<- 回到列表')
-					])),
+				_elm_lang$html$Html_App$map,
+				_user$project$Main$OnI18n,
 				A2(
-				_elm_lang$html$Html$h2,
-				_elm_lang$core$Native_List.fromArray(
-					[
-						_elm_lang$html$Html_Attributes$style(
-						_elm_lang$core$Native_List.fromArray(
-							[
-								{ctor: '_Tuple2', _0: 'color', _1: 'blue'},
-								{ctor: '_Tuple2', _0: 'text-align', _1: 'center'}
-							]))
-					]),
-				_elm_lang$core$Native_List.fromArray(
-					[
-						_elm_lang$html$Html$text(
-						A2(
-							_elm_lang$core$Maybe$withDefault,
-							'',
-							A3(
-								_elm_lang$core$Basics$flip,
-								_elm_lang$core$Array$get,
-								_user$project$Main$symbolIntro,
-								A2(
-									_user$project$Main$getTile,
-									model,
-									A2(
-										_elm_lang$core$Basics$uncurry,
-										_user$project$Main$indexOf(model),
-										A2(
-											_elm_lang$core$Maybe$withDefault,
-											{ctor: '_Tuple2', _0: 0, _1: 0},
-											model.hoverAt))))))
-					])),
+					_user$project$MistbornPairingI18n$view,
+					model.i18n,
+					A2(
+						_elm_lang$core$Maybe$map,
+						_user$project$Main$getTile(model),
+						model.hoverAt))),
 				A2(
 				_elm_lang$html$Html$div,
 				_elm_lang$core$Native_List.fromArray(
@@ -10945,12 +11308,10 @@ var _user$project$Main$view = function (model) {
 									{ctor: '_Tuple2', _0: 'background', _1: 'rgba(0,0,0,0)'}
 								])))
 					]),
-				_elm_lang$core$List$concat(
-					_elm_lang$core$Array$toList(
-						A2(
-							_elm_lang$core$Array$indexedMap,
-							_user$project$Main$showTile(model),
-							model.tiles)))),
+				A2(
+					_elm_lang$core$List$concatMap,
+					_user$project$Main$showTile(model),
+					_elm_lang$core$Dict$toList(model.tiles))),
 				A2(
 				_elm_lang$svg$Svg$svg,
 				_elm_lang$core$Native_List.fromArray(
@@ -10968,10 +11329,195 @@ var _user$project$Main$view = function (model) {
 					[]) : _user$project$Main$showPath(model))
 			]));
 };
+var _user$project$Main$ShuffleBoard = function (a) {
+	return {ctor: 'ShuffleBoard', _0: a};
+};
+var _user$project$Main$checkPairing = F3(
+	function (pos, pos$, model) {
+		var _p26 = A3(_user$project$Main$checkPairing$, model, pos, pos$);
+		if (_p26.ctor === 'Just') {
+			var newBoard = function (_) {
+				return _.tiles;
+			}(
+				A2(_user$project$Main$resetTiles, model.clicked, model));
+			var msg = _elm_lang$core$Basics$always(
+				_user$project$Main$Paired(model.clicked));
+			return A2(_user$project$Main$hasPairs, model, newBoard) ? {
+				ctor: '_Tuple2',
+				_0: _elm_lang$core$Native_Utils.update(
+					model,
+					{path: _p26._0}),
+				_1: A3(
+					_elm_lang$core$Task$perform,
+					msg,
+					msg,
+					_elm_lang$core$Process$sleep(0.3 * _elm_lang$core$Time$second))
+			} : {
+				ctor: '_Tuple2',
+				_0: model,
+				_1: A2(
+					_user$project$Main$runGenerator,
+					_user$project$Main$ShuffleBoard,
+					_user$project$Main$shuffle(
+						_elm_lang$core$Dict$values(newBoard)))
+			};
+		} else {
+			return {
+				ctor: '_Tuple2',
+				_0: _elm_lang$core$Native_Utils.update(
+					model,
+					{
+						clicked: _elm_lang$core$Native_List.fromArray(
+							[])
+					}),
+				_1: _elm_lang$core$Platform_Cmd$none
+			};
+		}
+	});
+var _user$project$Main$update = F2(
+	function (msg, model) {
+		var _p27 = msg;
+		switch (_p27.ctor) {
+			case 'GenerateBoard':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							tiles: A2(_user$project$Main$convertBoard, model, _p27._0)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'ShuffleBoard':
+				var _p28 = _p27._0;
+				var newBoard = A2(_user$project$Main$setTiles, model.tiles, _p28);
+				return A2(_user$project$Main$hasPairs, model, newBoard) ? {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{tiles: newBoard}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				} : {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: A2(
+						_user$project$Main$runGenerator,
+						_user$project$Main$ShuffleBoard,
+						_user$project$Main$shuffle(_p28))
+				};
+			case 'MouseEnter':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							hoverAt: _elm_lang$core$Maybe$Just(_p27._0)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'MouseLeave':
+				var pos$ = _elm_lang$core$Native_Utils.eq(
+					model.hoverAt,
+					_elm_lang$core$Maybe$Just(_p27._0)) ? _elm_lang$core$Maybe$Nothing : model.hoverAt;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{hoverAt: pos$}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'ClickOn':
+				var _p31 = _p27._0;
+				var setClicked = function (m) {
+					return _elm_lang$core$Native_Utils.update(
+						m,
+						{
+							clicked: _elm_lang$core$Native_List.fromArray(
+								[_p31])
+						});
+				};
+				var _p29 = model.clicked;
+				if ((_p29.ctor === '::') && (_p29._1.ctor === '[]')) {
+					var _p30 = _p29._0;
+					if (_elm_lang$core$Native_Utils.eq(_p31, _p30)) {
+						return {
+							ctor: '_Tuple2',
+							_0: _elm_lang$core$Native_Utils.update(
+								model,
+								{
+									clicked: _elm_lang$core$Native_List.fromArray(
+										[])
+								}),
+							_1: _elm_lang$core$Platform_Cmd$none
+						};
+					} else {
+						var t$ = A2(_user$project$Main$getTile, model, _p30);
+						var t = A2(_user$project$Main$getTile, model, _p31);
+						return (!_elm_lang$core$Native_Utils.eq(t, t$)) ? {
+							ctor: '_Tuple2',
+							_0: setClicked(model),
+							_1: _elm_lang$core$Platform_Cmd$none
+						} : A3(
+							_user$project$Main$checkPairing,
+							_p31,
+							_p30,
+							_elm_lang$core$Native_Utils.update(
+								model,
+								{
+									clicked: _elm_lang$core$Native_List.fromArray(
+										[_p31, _p30])
+								}));
+					}
+				} else {
+					return {
+						ctor: '_Tuple2',
+						_0: A2(
+							_user$project$Main$resetTiles,
+							model.clicked,
+							setClicked(
+								_elm_lang$core$Native_Utils.update(
+									model,
+									{
+										path: _elm_lang$core$Native_List.fromArray(
+											[])
+									}))),
+						_1: _elm_lang$core$Platform_Cmd$none
+					};
+				}
+			case 'Paired':
+				return {
+					ctor: '_Tuple2',
+					_0: (!_elm_lang$core$Native_Utils.eq(model.clicked, _p27._0)) ? model : A2(
+						_user$project$Main$resetTiles,
+						model.clicked,
+						_elm_lang$core$Native_Utils.update(
+							model,
+							{
+								clicked: _elm_lang$core$Native_List.fromArray(
+									[])
+							})),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			default:
+				var _p32 = A2(_user$project$MistbornPairingI18n$update, _p27._0, model.i18n);
+				var m = _p32._0;
+				var c = _p32._1;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{i18n: m}),
+					_1: A2(_elm_lang$core$Platform_Cmd$map, _user$project$Main$OnI18n, c)
+				};
+		}
+	});
 var _user$project$Main$GenerateBoard = function (a) {
 	return {ctor: 'GenerateBoard', _0: a};
 };
 var _user$project$Main$init = function () {
+	var _p33 = _user$project$MistbornPairingI18n$init('zh');
+	var model$ = _p33._0;
+	var cmd$ = _p33._1;
 	var c = 12;
 	var r = 6;
 	return {
@@ -10979,31 +11525,29 @@ var _user$project$Main$init = function () {
 		_0: {
 			rows: r,
 			cols: c,
-			tiles: _elm_lang$core$Array$empty,
+			tiles: _elm_lang$core$Dict$empty,
 			hoverAt: _elm_lang$core$Maybe$Nothing,
 			clicked: _elm_lang$core$Native_List.fromArray(
 				[]),
 			path: _elm_lang$core$Native_List.fromArray(
-				[])
+				[]),
+			i18n: model$
 		},
-		_1: A2(
-			_elm_lang$core$Random$generate,
-			_user$project$Main$GenerateBoard,
-			A2(
-				_elm_lang$core$Random$map,
-				function (_p23) {
-					return _elm_lang$core$Basics$fst(
-						_mgold$elm_random_pcg$Random_Pcg$step(
-							A2(
-								_mgold$elm_random_pcg$Random_Pcg$andThen,
-								A2(
-									_mgold$elm_random_pcg$Random_Pcg$list,
-									((r * c) / 2) | 0,
-									A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, 15)),
-								_user$project$Main$generateBoard))(
-							_mgold$elm_random_pcg$Random_Pcg$initialSeed(_p23)));
-				},
-				A2(_elm_lang$core$Random$int, _elm_lang$core$Random$minInt, _elm_lang$core$Random$maxInt)))
+		_1: _elm_lang$core$Platform_Cmd$batch(
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A2(
+					_user$project$Main$runGenerator,
+					_user$project$Main$GenerateBoard,
+					A2(
+						_mgold$elm_random_pcg$Random_Pcg$andThen,
+						A2(
+							_mgold$elm_random_pcg$Random_Pcg$list,
+							((r * c) / 2) | 0,
+							A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, _user$project$Main$symbols - 1)),
+						_user$project$Main$generateBoard)),
+					A2(_elm_lang$core$Platform_Cmd$map, _user$project$Main$OnI18n, cmd$)
+				]))
 	};
 }();
 var _user$project$Main$main = {
