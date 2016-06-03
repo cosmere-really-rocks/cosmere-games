@@ -80,7 +80,7 @@ init params = let ( model', cmd' ) = I18n.init params.lang
                   board = Dict.fromList
                           <| List.map2 (\x y -> ( ( x, y ), -1 )) xs ys 
               in ( { config = config
-                   , holeFiller = gravity
+                   , holeFiller = rocket -- gravity
                    , board = board
                    , hoverAt = Nothing
                    , clicked = []
@@ -502,14 +502,33 @@ config = { rows = 9
               
 stasis : HoleFiller
 stasis _ _ _ = Nothing
-              
-gravity : HoleFiller
-gravity _ board ( x, y ) =
-    let ys = flip List.map [ 1 .. y - 1 ] <| (-) y
-    in Maybe.map ((,) x << fst)
+
+lashing : (TilePos -> Int) -> (Int -> TilePos) -> (Config -> Int -> List Int)
+        -> HoleFiller
+lashing pickCoord makeCoord surge config board coord =
+    let y = pickCoord coord
+        ys = surge config y
+    in Maybe.map (makeCoord << fst)
         <| List.find ((/=) Nothing << snd)
         <| List.zip ys
         <| flip List.map ys
-        <| (flip Dict.get board << (,) x)
+        <| (flip Dict.get board << makeCoord)
 
+downSurge : Config -> Int -> List Int
+downSurge _ y = flip List.map [ 1 .. y - 1 ] <| (-) y
             
+upSurge : (Config -> Int) -> Config -> Int -> List Int
+upSurge field config y = flip List.map [ 1 .. field config - y ] <| (+) y
+
+addX : TilePos -> Int -> TilePos
+addX ( x, _ ) = (,) x
+            
+addY : TilePos -> Int -> TilePos
+addY ( _, y ) = flip (,) y
+            
+gravity : HoleFiller
+gravity config board pos = lashing snd (addX pos) downSurge config board pos
+
+rocket : HoleFiller
+rocket config board pos =
+    lashing snd (addX pos) (upSurge .rows) config board pos
