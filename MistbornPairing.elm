@@ -251,9 +251,11 @@ setBoard : Model -> List Tile -> (Model, Cmd Msg)
 setBoard model tiles =
     let board = setTiles model.tiles tiles
         hint = findPair model board
-    in case hint of
-           Just hint' -> ( { model | tiles = board, hint = hint' }, Cmd.none )
-           _ -> ( model, runGenerator UpdateBoard <| shuffle tiles )
+    in if Dict.isEmpty board || hint /= Nothing
+        then ( { model | tiles = board, hint = Maybe.withDefault [] hint }
+             , Cmd.none
+             )
+       else ( model, runGenerator UpdateBoard <| shuffle tiles )
         
 showPath : Model -> List (Svg Msg)
 showPath model =
@@ -304,7 +306,7 @@ findPair model tiles =
         posesOf sym = Dict.toList tiles
                     |> List.filter (((==) sym) << snd)
                     |> List.map fst
-        check pos pos' = checkPairing' model pos pos'
+        check pos pos' = checkPairing' { model | tiles = tiles } pos pos'
         checkPoses poses =
             case poses of
                 []  -> Nothing
