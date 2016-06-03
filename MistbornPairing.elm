@@ -68,7 +68,7 @@ init params = let r = 6
                   ( model', cmd' ) = I18n.init params.lang
                   xs = List.concat <| List.repeat r [ 1 .. c ]
                   ys = List.concatMap (List.repeat c) [ 1 .. r ]
-                  board = Debug.log "board" <| Dict.fromList
+                  board = Dict.fromList
                           <| List.map2 (\x y -> ( ( x, y ), -1 )) xs ys 
               in ( { rows = r
                    , cols = c
@@ -239,7 +239,7 @@ shuffle l =
     in Random.map fst <| shuffle' ( [], l )
 
 setTiles : Tiles -> List Tile -> Tiles
-setTiles board = Dict.fromList << List.zip (Debug.log "poses" <| Dict.keys <| Debug.log "board to set" board)
+setTiles board = Dict.fromList << List.zip (Dict.keys board)
                 
 generateBoard : List Tile -> Random.Generator (List Tile)
 generateBoard halfTiles = shuffle <| halfTiles ++ halfTiles
