@@ -11746,11 +11746,7 @@ var _user$project$MistbornPairing$setTiles = function (board) {
 		return _elm_lang$core$Dict$fromList(
 			A2(
 				_elm_community$list_extra$List_Extra$zip,
-				A2(
-					_elm_lang$core$Debug$log,
-					'poses',
-					_elm_lang$core$Dict$keys(
-						A2(_elm_lang$core$Debug$log, 'board to set', board))),
+				_elm_lang$core$Dict$keys(board),
 				_p14));
 	};
 };
@@ -12158,22 +12154,19 @@ var _user$project$MistbornPairing$init = function (params) {
 		_elm_lang$core$List$concatMap,
 		_elm_lang$core$List$repeat(c),
 		_elm_lang$core$Native_List.range(1, r));
-	var board = A2(
-		_elm_lang$core$Debug$log,
-		'board',
-		_elm_lang$core$Dict$fromList(
-			A3(
-				_elm_lang$core$List$map2,
-				F2(
-					function (x, y) {
-						return {
-							ctor: '_Tuple2',
-							_0: {ctor: '_Tuple2', _0: x, _1: y},
-							_1: -1
-						};
-					}),
-				xs,
-				ys)));
+	var board = _elm_lang$core$Dict$fromList(
+		A3(
+			_elm_lang$core$List$map2,
+			F2(
+				function (x, y) {
+					return {
+						ctor: '_Tuple2',
+						_0: {ctor: '_Tuple2', _0: x, _1: y},
+						_1: -1
+					};
+				}),
+			xs,
+			ys));
 	return {
 		ctor: '_Tuple2',
 		_0: {
