@@ -11540,7 +11540,7 @@ var _user$project$MistbornPairing$stasis = F3(
 var _user$project$MistbornPairing$levels = _elm_lang$core$Array$fromList(
 	_elm_lang$core$Native_List.fromArray(
 		[_user$project$MistbornPairing$stasis, _user$project$MistbornPairing$gravity, _user$project$MistbornPairing$rocket, _user$project$MistbornPairing$leftLashing, _user$project$MistbornPairing$rightLashing]));
-var _user$project$MistbornPairing$config = {rows: 8, cols: 12, tileWidth: 50, tileHeight: 50, topPadding: 50};
+var _user$project$MistbornPairing$config = {rows: 8, cols: 12, tileWidth: 50, tileHeight: 50, topPadding: 60};
 var _user$project$MistbornPairing$levelParser = A2(
 	_evancz$url_parser$UrlParser_ops['</>'],
 	_evancz$url_parser$UrlParser$s('level'),
@@ -12257,13 +12257,14 @@ var _user$project$MistbornPairing$showTile = F2(
 			]);
 	});
 var _user$project$MistbornPairing$view = function (model) {
-	var h = A2(
-		_elm_lang$core$Basics_ops['++'],
-		_elm_lang$core$Basics$toString((model.config.rows + 2) * 105),
-		'px');
+	var config = model.config;
 	var w = A2(
 		_elm_lang$core$Basics_ops['++'],
-		_elm_lang$core$Basics$toString((model.config.cols + 2) * 80),
+		_elm_lang$core$Basics$toString((config.cols + 2) * (config.tileWidth + 5)),
+		'px');
+	var h = A2(
+		_elm_lang$core$Basics_ops['++'],
+		_elm_lang$core$Basics$toString(((config.rows + 2) * (config.tileHeight + 5)) + config.topPadding),
 		'px');
 	var styles = _elm_lang$core$Native_List.fromArray(
 		[
@@ -12277,7 +12278,12 @@ var _user$project$MistbornPairing$view = function (model) {
 		_elm_lang$html$Html$div,
 		_elm_lang$core$Native_List.fromArray(
 			[
-				_elm_lang$html$Html_Attributes$style(styles)
+				_elm_lang$html$Html_Attributes$style(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						{ctor: '_Tuple2', _0: 'display', _1: 'flex'},
+						{ctor: '_Tuple2', _0: 'width', _1: '100%'}
+					]))
 			]),
 		_elm_lang$core$Dict$isEmpty(model.board) ? _elm_lang$core$Native_List.fromArray(
 			[
@@ -12288,7 +12294,9 @@ var _user$project$MistbornPairing$view = function (model) {
 						_elm_lang$html$Html_Attributes$style(
 						_elm_lang$core$Native_List.fromArray(
 							[
-								{ctor: '_Tuple2', _0: 'text-align', _1: 'center'}
+								{ctor: '_Tuple2', _0: 'text-align', _1: 'center'},
+								{ctor: '_Tuple2', _0: 'vertical-align', _1: 'center'},
+								{ctor: '_Tuple2', _0: 'margin', _1: 'auto'}
 							]))
 					]),
 				_elm_lang$core$Native_List.fromArray(
@@ -12414,7 +12422,7 @@ var _user$project$MistbornPairing$view = function (model) {
 					model.clicked,
 					_elm_lang$core$Native_List.fromArray(
 						[])) ? _elm_lang$core$Native_List.fromArray(
-					[]) : A2(_user$project$MistbornPairing$showPath, model.config, model.path))
+					[]) : A2(_user$project$MistbornPairing$showPath, config, model.path))
 			]));
 };
 var _user$project$MistbornPairing$UpdateBoard = function (a) {

@@ -1,4 +1,6 @@
 { "backButton": "<< 回到列表"
+  , "levelClear": "下一关将在3秒后自动开始..."
+  , "allClear": "您已通关，你真棒！"
   , "themes" : { "plain": "普通"
                 , "lien": "LiEN²"
               }
