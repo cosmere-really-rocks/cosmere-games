@@ -33,20 +33,23 @@ main = Navigation.program urlParser { init = init
                                     , subscriptions = subscriptions
                                     }
 
-type alias Params = { lang : String, theme : String }
-
 type alias Tile = Int
 type alias TilePos = (Int, Int)
-type alias Tiles = Dict.Dict TilePos Tile
-type alias HoleFiller = Tiles -> TilePos -> Maybe TilePos
+type alias Tiles = List Int
+type alias Board = Dict.Dict TilePos Tile
 
-type alias Model = { rows : Int
-                   , cols : Int
-                   , tileWidth: Int
-                   , tileHeight: Int
-                   , topPadding : Int
+type alias Config = { rows : Int
+                    , cols : Int
+                    , tileWidth: Int
+                    , tileHeight: Int
+                    , topPadding : Int
+                    }       
+type alias HoleFiller = Config -> Board -> TilePos -> Maybe TilePos
+type alias Params = { lang : String, theme : String }
+    
+type alias Model = { config : Config
                    , holeFiller : HoleFiller
-                   , tiles : Tiles
+                   , board : Board
                    , hoverAt : Maybe TilePos
                    , clicked : List TilePos
                    , path : List TilePos
@@ -56,7 +59,7 @@ type alias Model = { rows : Int
                    , i18n : I18n.Model
                    }
 
-type Msg = UpdateBoard Tiles
+type Msg = UpdateBoard Board
          | MouseEnter TilePos
          | MouseLeave TilePos
          | ClickOn TilePos
@@ -69,23 +72,16 @@ urlParser : Navigation.Parser Params
 urlParser = Navigation.makeParser fromUrl
 
 init : Params -> (Model, Cmd Msg)
-init params = let r = 9
-                  c = 18
-                  w = 50
-                  h = 65
-                  p = 50
-                  ( model', cmd' ) = I18n.init params.lang
+init params = let ( model', cmd' ) = I18n.init params.lang
+                  r = config.rows
+                  c = config.cols
                   xs = List.concat <| List.repeat r [ 1 .. c ]
                   ys = List.concatMap (List.repeat c) [ 1 .. r ]
                   board = Dict.fromList
                           <| List.map2 (\x y -> ( ( x, y ), -1 )) xs ys 
-              in ( { rows = r
-                   , cols = c
-                   , tileWidth = w
-                   , tileHeight = h
-                   , topPadding = p
-                   , holeFiller = stasis
-                   , tiles = board
+              in ( { config = config
+                   , holeFiller = gravity
+                   , board = board
                    , hoverAt = Nothing
                    , clicked = []
                    , path = []
@@ -105,7 +101,7 @@ init params = let r = 9
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
-        UpdateBoard board -> updateBoard { model | tiles = board }
+        UpdateBoard board -> updateBoard { model | board = board }
         MouseEnter pos ->
             ( { model | hoverAt = Just pos }, Cmd.none )
         MouseLeave pos ->
@@ -119,8 +115,8 @@ update msg model =
                    [ pos' ] ->
                        if pos == pos'
                        then ( { model | clicked = [] }, Cmd.none )
-                       else let t = getTile model.tiles pos
-                                t' = getTile model.tiles pos'
+                       else let t = getTile model.board pos
+                                t' = getTile model.board pos'
                             in if t /= t'
                                then ( setClicked model, Cmd.none )
                                else
@@ -129,22 +125,19 @@ update msg model =
                                           | clicked = [ pos, pos' ]
                                           , hinted = False
                                       }
-                   _ -> let newBoard = if model.hinted
-                                       then model.tiles
-                                       else resetTiles model.tiles model.clicked
-                        in ( setClicked { model
-                                            | path = []
-                                            , tiles = newBoard
-                                            , hinted = False
-                                        }
-                           , Cmd.none
-                           )
+                   _ ->
+                       let board' = if model.hinted
+                                    then model.board
+                                    else resetTiles model.board model.clicked
+                           ( m, c ) = update (Paired model.clicked)
+                                      <| { model | board = board' }
+                       in ( setClicked m, c )
         Paired clicked ->
             if model.clicked /= clicked
             then ( model, Cmd.none )
             else flip update model
                 <| UpdateBoard
-                <| resetTiles model.tiles model.clicked
+                <| resetTiles model.board model.clicked
         Hint ->
             let m = if model.hinted || List.length model.clicked /= 2
                     then model
@@ -184,8 +177,8 @@ subscriptions model = Sub.none
 
 view : Model -> Html Msg
 view model =
-    let w = toString ((model.cols + 2) * 80) ++ "px"
-        h = toString ((model.rows + 2) * 105) ++ "px"
+    let w = toString ((model.config.cols + 2) * 80) ++ "px"
+        h = toString ((model.config.rows + 2) * 105) ++ "px"
         styles = [ ( "width", w )
                  , ( "height", h )
                  , ( "top", "0" )
@@ -216,7 +209,7 @@ view model =
                            <| Maybe.withDefault ""
                            <| model.hoverAt
                                `Maybe.andThen` (flip Array.get intro
-                                                << getTile model.tiles)
+                                                << getTile model.board)
                      ]
               ]
         , div [ Html.style <| styles ++ [ ( "z-index", "10" )
@@ -224,11 +217,11 @@ view model =
                                         ]
               ]
               <| List.concatMap (showTile model)
-              <| Dict.toList model.tiles
+              <| Dict.toList model.board
         , Svg.svg [ Html.style <| ( "z-index", "0" ) :: styles ]
             <| if model.clicked == []
                then []
-               else showPath model
+               else showPath model.config model.path
         ]
 
 runGenerator : (a -> msg) -> Random.Generator a -> Cmd msg
@@ -251,18 +244,24 @@ shuffle l =
                    `Random.andThen` (\(t, b') -> shuffle' ( t :: a, b' ))
     in Random.map fst <| shuffle' ( [], l )
 
-setTiles : Tiles -> List Tile -> Tiles
+setTiles : Board -> Tiles -> Board
 setTiles board = Dict.fromList << List.zip (Dict.keys board)
                 
-generateBoard : Tiles -> List Tile -> Random.Generator Tiles
+generateBoard : Board -> Tiles -> Random.Generator Board
 generateBoard board halfTiles =
     Random.map (setTiles board) <| shuffle <| halfTiles ++ halfTiles
 
 updateBoard : Model -> (Model, Cmd Msg)
 updateBoard model =
-    let board' = fillHoles model.holeFiller model.tiles model.clicked
-        hint = findPair model board'
-        model' = { model | clicked = [], path = [], hinted = False }
+    let board' = fillHoles model.holeFiller model.config model.board
+                 <| model.clicked
+        model' = { model
+                     | clicked = []
+                     , path = []
+                     , hinted = False
+                     , board = board'
+                 }
+        hint = findPair model.config board'
     in if Dict.isEmpty board' || hint /= Nothing
        then ( { model' | hint = Maybe.withDefault [] hint }, Cmd.none )
        else ( model'
@@ -272,26 +271,30 @@ updateBoard model =
                 <| Dict.values board'
             )
 
-fillHoles : HoleFiller -> Tiles -> List TilePos -> Tiles
-fillHoles filler board poses =
+fillHoles : HoleFiller -> Config -> Board -> List TilePos -> Board
+fillHoles filler config board poses =
     if poses == []
     then board
     else let ( board', poses' ) =
              List.foldl (\pos ( board, poses ) ->
-                             case filler board pos of
+                             case filler config board pos of
                                  Just pos' ->
-                                     ( Dict.insert pos' (getTile board pos)
-                                       <| Dict.remove pos board
+                                     ( Dict.insert pos (getTile board pos')
+                                       <| Dict.remove pos' board
                                      , pos' :: poses
                                      )
                                  _ -> ( board, poses )) ( board, [] ) poses
-         in fillHoles filler board' poses'
+         in fillHoles filler config board' poses'
            
-showPath : Model -> List (Svg Msg)
-showPath model =
-    let makePoints = String.join " " <| List.map makePoint model.path
-        makePoint ( x, y ) = toString (x * 80 + 40) ++ ","
-                             ++ toString (y * 105 + 53)
+showPath : Config -> List TilePos -> List (Svg Msg)
+showPath config path =
+    let makePoints = String.join " " <| List.map makePoint path
+        makePoint ( x, y ) =
+            toString ((x * 2 + 1) * w // 2) ++ ","
+                ++ toString ((y * 2 + 1) * h // 2 + p)
+        w = config.tileWidth + 5
+        h = config.tileHeight + 5
+        p = config.topPadding
     in [ polyline [ fill "none"
                   , stroke "red"
                   , strokeWidth "3px"
@@ -309,10 +312,11 @@ showTile model ( pos, t ) =
                  else if isHoverAt
                       then "inset 3px blue"
                       else "solid 1px black"
-        toSize = ((<|) toString) >> (flip (++) "px")
+        toSize = (<|) toString >> (flip (++) "px")
+        config = model.config
         delta = if isClicked || isHoverAt then 5 else 0
-        width = toSize <| model.tileWidth - delta
-        height = toSize <| model.tileHeight - delta
+        width = toSize <| config.tileWidth - delta
+        height = toSize <| config.tileHeight - delta
     in if t < 0
        then []
        else [ img [ src ("themes/" ++ fst (model.theme) ++ "/" ++ toString t
@@ -320,9 +324,10 @@ showTile model ( pos, t ) =
                   , Html.style [ ( "width", width )
                                , ( "height", height )
                                , ( "top"
-                                 , toSize <| (y * (model.tileHeight + 5)
-                                              + model.topPadding) )
-                               , ( "left", toSize <| x * (model.tileWidth + 5) )
+                                 , toSize <| (y * (config.tileHeight + 5)
+                                              + config.topPadding) )
+                               , ( "left"
+                                 , toSize <| x * (config.tileWidth + 5) )
                                , ( "position", "absolute" )
                                , ( "border", border )
                                , ( "border-radius", "10px" )
@@ -334,13 +339,13 @@ showTile model ( pos, t ) =
                   ] []
             ]
 
-findPair : Model -> Tiles -> Maybe (List TilePos)
-findPair model tiles =
+findPair : Config -> Board -> Maybe (List TilePos)
+findPair config board =
     let syms = [ 0 .. symbols - 1 ]
-        posesOf sym = Dict.toList tiles
-                    |> List.filter (((==) sym) << snd)
+        posesOf sym = Dict.toList board
+                    |> List.filter ((==) sym << snd)
                     |> List.map fst
-        check pos pos' = checkPairing' { model | tiles = tiles } pos pos'
+        check pos pos' = checkPairing' config board pos pos'
         checkPoses poses =
             case poses of
                 []  -> Nothing
@@ -351,7 +356,7 @@ findPair model tiles =
         
 checkPairing : TilePos -> TilePos -> Model -> (Model, Cmd Msg)
 checkPairing pos pos' model = 
-    case checkPairing' model pos pos' of
+    case checkPairing' model.config model.board pos pos' of
         Just path ->
             let msg = always <| Paired model.clicked
             -- in flip update model <| msg ()
@@ -361,10 +366,10 @@ checkPairing pos pos' model =
         Nothing ->
             ( { model | clicked = [] }, Cmd.none )
 
-checkPairing' : Model -> TilePos -> TilePos -> Maybe (List TilePos)
-checkPairing' model pos pos' =
+checkPairing' : Config -> Board -> TilePos -> TilePos -> Maybe (List TilePos)
+checkPairing' config board pos pos' =
     let flipTuple = uncurry <| flip (,)
-        dimSum = model.rows + model.cols
+        dimSum = config.rows + config.cols
         checkPath lastPass makeCoord dim pos pos' =
             let ( x, y ) = pos
                 ( x', y' ) = pos'
@@ -385,7 +390,7 @@ checkPairing' model pos pos' =
                         -- same level, see if there's a straight line
                         || (List.any ((/=) -1)
                             <| flip List.map [ x + 1 .. x' - 1 ]
-                            <| getTile model.tiles << flip makeCoord y)
+                            <| getTile board << flip makeCoord y)
                     then Nothing
                     else Just [ makeCoord x y, makeCoord x' y' ]
             in if simple /= Nothing
@@ -400,16 +405,16 @@ checkPairing' model pos pos' =
             -- first find a unobstructed top path from ( x, y )
             -- assuming y < y'
             let topPath = flip List.takeWhile dx
-                          <| ((==) -1)
-                              << getTile model.tiles
+                          <| ((==) -1
+                              << getTile board
                               << flip makeCoord y
-                              << ((+) x)
+                              << (+) x)
             -- for each empty cell in the top path, see if the L shape
             -- topping there can reach ( x', y' )
             in Maybe.oneOf
                 <| flip List.map topPath
-                <| checkLShape makeCoord x y x' y'
-                    << ((+) x)
+                <| (checkLShape makeCoord x y x' y'
+                    << (+) x)
         checkLShape makeCoord x y x' y' x'' =
             -- if the whole path is L shaped, don't counnt ( x', y' )
             -- which is known to be /= -1
@@ -420,10 +425,10 @@ checkPairing' model pos pos' =
             -- vertical path has to be unobstructed
             in if (List.any ((/=) -1)
                    <| flip List.map vertPath'
-                   <| getTile model.tiles << makeCoord x'')
+                   <| getTile board << makeCoord x'')
                 -- as well as the bottom path
                 || (List.any ((/=) -1)
-                    <| List.map (getTile model.tiles << flip makeCoord y')
+                    <| List.map (getTile board << flip makeCoord y')
                     <| List.filter ((/=) x')
                     <| connect x' x'')
             then Nothing
@@ -433,12 +438,12 @@ checkPairing' model pos pos' =
                       , makeCoord x' y'
                       ]
         connect i i' = [ Basics.min i i' .. Basics.max i i' ]
-    in checkPath False (,) model.cols pos pos'
+    in checkPath False (,) config.cols pos pos'
 
-getTile : Tiles -> TilePos -> Tile
-getTile tiles = Maybe.withDefault -1 << flip Dict.get tiles
+getTile : Board -> TilePos -> Tile
+getTile board = Maybe.withDefault -1 << flip Dict.get board
 
-resetTiles : Tiles -> List TilePos -> Tiles
+resetTiles : Board -> List TilePos -> Board
 resetTiles = List.foldl Dict.remove
 
 symbols : Int
@@ -487,11 +492,24 @@ fromUrl = Result.withDefault { lang = "zh", theme = "plain" }
           << String.dropLeft 2
           << .hash
 
+config : Config
+config = { rows = 9
+         , cols = 18
+         , tileWidth = 50
+         , tileHeight = 65
+         , topPadding = 50
+         }
+              
 stasis : HoleFiller
-stasis _ _ = Nothing
+stasis _ _ _ = Nothing
               
 gravity : HoleFiller
-gravity tiles ( x, y ) = let pos' = ( x, y - 1 )
-                         in if Dict.get pos' tiles == Nothing
-                            then Nothing
-                            else Just pos'
+gravity _ board ( x, y ) =
+    let ys = flip List.map [ 1 .. y - 1 ] <| (-) y
+    in Maybe.map ((,) x << fst)
+        <| List.find ((/=) Nothing << snd)
+        <| List.zip ys
+        <| flip List.map ys
+        <| (flip Dict.get board << (,) x)
+
+            
