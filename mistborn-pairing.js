@@ -12338,7 +12338,8 @@ var _user$project$MistbornPairing$update = F2(
 								model,
 								{
 									clicked: _elm_lang$core$Native_List.fromArray(
-										[_p38, _p37])
+										[_p38, _p37]),
+									hinted: false
 								}));
 					}
 				} else {
