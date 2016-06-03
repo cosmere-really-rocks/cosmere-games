@@ -40,6 +40,8 @@ type alias TilePos = (Int, Int)
 type alias Tiles = Dict.Dict TilePos Tile
 type alias Model = { rows : Int
                    , cols : Int
+                   , tileWidth: Int
+                   , tileHeight: Int
                    , tiles : Tiles
                    , hoverAt : Maybe TilePos
                    , clicked : List TilePos
@@ -65,6 +67,8 @@ urlParser = Navigation.makeParser fromUrl
 init : Params -> (Model, Cmd Msg)
 init params = let r = 6
                   c = 12
+                  w = 75
+                  h = 100
                   ( model', cmd' ) = I18n.init params.lang
                   xs = List.concat <| List.repeat r [ 1 .. c ]
                   ys = List.concatMap (List.repeat c) [ 1 .. r ]
@@ -72,6 +76,8 @@ init params = let r = 6
                           <| List.map2 (\x y -> ( ( x, y ), -1 )) xs ys 
               in ( { rows = r
                    , cols = c
+                   , tileWidth = w
+                   , tileHeight = h
                    , tiles = board
                    , hoverAt = Nothing
                    , clicked = []
@@ -279,16 +285,18 @@ showTile model ( pos, t ) =
                  else if isHoverAt
                       then "inset 3px blue"
                       else "solid 1px black"
-        width = if isClicked || isHoverAt then "70px" else "75px"
-        height = if isClicked || isHoverAt then "95px" else "100px"
+        toSize = ((<|) toString) >> (flip (++) "px")
+        delta = if isClicked || isHoverAt then 5 else 0
+        width = toSize <| model.tileWidth - delta
+        height = toSize <| model.tileHeight - delta
     in if t < 0
        then []
        else [ img [ src ("themes/" ++ fst (model.theme) ++ "/" ++ toString t
                          ++ "." ++ snd (model.theme))
                   , Html.style [ ( "width", width )
                                , ( "height", height )
-                               , ( "top", toString (y * 105) ++ "px" )
-                               , ( "left", toString (x * 80) ++ "px" )
+                               , ( "top", toSize <| y * (model.tileHeight + 5) )
+                               , ( "left", toSize <| x * (model.tileWidth + 5) )
                                , ( "position", "absolute" )
                                , ( "border", border )
                                , ( "border-radius", "10px" )
@@ -464,3 +472,4 @@ fromUrl = Result.withDefault { lang = "zh", theme = "plain" }
           << UrlParser.parse Params (langParser </> themeParser)
           << String.dropLeft 2
           << .hash
+
