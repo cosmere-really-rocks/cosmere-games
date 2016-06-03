@@ -44,16 +44,18 @@ type alias Model = { rows : Int
                    , hoverAt : Maybe TilePos
                    , clicked : List TilePos
                    , path : List TilePos
+                   , hint : List TilePos
+                   , hinted : Bool
                    , theme : (String, String)
                    , i18n : I18n.Model
                    }
 
-type Msg = GenerateBoard (List Tile)
-         | ShuffleBoard (List Tile)
+type Msg = UpdateBoard (List Tile)
          | MouseEnter TilePos
          | MouseLeave TilePos
          | ClickOn TilePos
          | Paired (List TilePos)
+         | Hint
          | ChangeTheme String
          | OnI18n I18n.Msg
 
@@ -64,16 +66,22 @@ init : Params -> (Model, Cmd Msg)
 init params = let r = 6
                   c = 12
                   ( model', cmd' ) = I18n.init params.lang
+                  xs = List.concat <| List.repeat r [ 1 .. c ]
+                  ys = List.concatMap (List.repeat c) [ 1 .. r ]
+                  board = Debug.log "board" <| Dict.fromList
+                          <| List.map2 (\x y -> ( ( x, y ), -1 )) xs ys 
               in ( { rows = r
                    , cols = c
-                   , tiles = Dict.empty
+                   , tiles = board
                    , hoverAt = Nothing
                    , clicked = []
                    , path = []
+                   , hint = []
+                   , hinted = False
                    , theme = findTheme params.theme
                    , i18n = model'
                    }
-                 , Platform.batch [ runGenerator GenerateBoard
+                 , Platform.batch [ runGenerator UpdateBoard
                                         <| (Random.list (r * c // 2)
                                             <| Random.int 0 <| symbols - 1)
                                             `Random.andThen` generateBoard
@@ -84,13 +92,7 @@ init params = let r = 6
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
-        GenerateBoard tiles ->
-            ( { model | tiles = convertBoard model tiles }, Cmd.none )
-        ShuffleBoard tiles ->
-            let newBoard = setTiles model.tiles tiles
-            in if hasPairs model newBoard
-               then ( { model | tiles = newBoard }, Cmd.none )
-               else ( model, runGenerator ShuffleBoard <| shuffle tiles )
+        UpdateBoard tiles -> setBoard model tiles
         MouseEnter pos ->
             ( { model | hoverAt = Just pos }, Cmd.none )
         MouseLeave pos ->
@@ -111,13 +113,16 @@ update msg model =
                                else
                                    checkPairing pos pos'
                                    <| { model | clicked = [ pos, pos' ] }
-                   _ -> ( setClicked
-                              { model
-                                  | path = []
-                                  , tiles = resetTiles model.tiles model.clicked
-                              }
-                       , Cmd.none
-                       )
+                   _ -> let newBoard = if model.hinted
+                                       then model.tiles
+                                       else resetTiles model.tiles model.clicked
+                        in ( setClicked { model
+                                            | path = []
+                                            , tiles = newBoard
+                                            , hinted = False
+                                        }
+                           , Cmd.none
+                           )
         Paired clicked ->
             ( if model.clicked /= clicked
               then model
@@ -127,6 +132,15 @@ update msg model =
                    }
             , Cmd.none
             )
+        Hint ->
+            let m = if model.hinted || List.length model.clicked /= 2
+                    then model
+                    else fst <| update (Paired model.clicked) model
+                ends = flip List.map [ List.head m.hint, List.last m.hint ]
+                       <| Maybe.withDefault ( 0, 0 )
+            in ( { m | clicked = ends, path = model.hint, hinted = True }
+               , Cmd.none
+               )
         ChangeTheme theme ->
             ( { model | theme = findTheme theme }
             , Navigation.newUrl <| toUrl <| Params model.i18n.lang theme
@@ -173,16 +187,23 @@ view model =
               ]
               [ Html.map OnI18n <| I18n.view model.i18n
               , div [ Html.style [ ( "width", "100%" ) ] ]
-                  <| List.concat
-                  <| List.indexedMap (themePicker model) themes
+                  <| Html.img [ Html.src "hint.png"
+                              , Html.style [ ( "width", "30px" )
+                                           , ( "height", "30px" )
+                                           ]
+                              , onClick Hint
+                              ] []
+                      :: (List.concat
+                          <| List.indexedMap (themePicker model) themes)
               , h3 [ Html.style [ ( "color", "blue" )
                                 , ( "text-align", "center" )
                                 ]
-                   ] [ Html.text
-                       <| Maybe.withDefault ""
-                       <| model.hoverAt `Maybe.andThen`
-                           (flip Array.get model.i18n.translations.symbolIntro
-                            << getTile model)
+                   ] [ let intro = model.i18n.translations.symbolIntro
+                       in Html.text
+                           <| Maybe.withDefault ""
+                           <| model.hoverAt
+                               `Maybe.andThen` (flip Array.get intro
+                                                << getTile model)
                      ]
               ]
         , div [ Html.style <| styles ++ [ ( "z-index", "10" )
@@ -217,18 +238,20 @@ shuffle l =
                    `Random.andThen` (\(t, b') -> shuffle' ( t :: a, b' ))
     in Random.map fst <| shuffle' ( [], l )
 
-setTiles : Tiles -> List Int -> Tiles
-setTiles board = Dict.fromList << List.zip (Dict.keys board)
+setTiles : Tiles -> List Tile -> Tiles
+setTiles board = Dict.fromList << List.zip (Debug.log "poses" <| Dict.keys <| Debug.log "board to set" board)
                 
-generateBoard : List Int -> Random.Generator (List Int)
+generateBoard : List Tile -> Random.Generator (List Tile)
 generateBoard halfTiles = shuffle <| halfTiles ++ halfTiles
 
-convertBoard : Model -> List Int -> Tiles
-convertBoard model tiles =
-    let xs = List.concat <| List.repeat model.rows [ 1 .. model.cols ]
-        ys = List.concatMap (List.repeat model.cols) [ 1 .. model.rows ]
-    in Dict.fromList <| List.map3 (\x y t -> ( ( x, y ), t )) xs ys tiles
-
+setBoard : Model -> List Tile -> (Model, Cmd Msg)
+setBoard model tiles =
+    let board = setTiles model.tiles tiles
+        hint = findPair model board
+    in case hint of
+           Just hint' -> ( { model | tiles = board, hint = hint' }, Cmd.none )
+           _ -> ( model, runGenerator UpdateBoard <| shuffle tiles )
+        
 showPath : Model -> List (Svg Msg)
 showPath model =
     let makePoints = String.join " " <| List.map makePoint model.path
@@ -272,18 +295,20 @@ showTile model ( pos, t ) =
                   ] []
             ]
 
-hasPairs : Model -> Tiles -> Bool
-hasPairs model tiles =
+findPair : Model -> Tiles -> Maybe (List TilePos)
+findPair model tiles =
     let syms = [ 0 .. symbols - 1 ]
         posesOf sym = Dict.toList tiles
                     |> List.filter (((==) sym) << snd)
                     |> List.map fst
-        check pos pos' = checkPairing' model pos pos' /= Nothing
+        check pos pos' = checkPairing' model pos pos'
         checkPoses poses =
             case poses of
-                []  -> False
-                pos :: rest -> List.any (check pos) rest || checkPoses rest
-    in List.any checkPoses <| List.map posesOf syms
+                []  -> Nothing
+                pos :: rest -> Maybe.oneOf
+                               <| checkPoses rest
+                                   :: List.map (check pos) rest
+    in Maybe.oneOf <| List.map checkPoses <| List.map posesOf syms
         
 checkPairing : TilePos -> TilePos -> Model -> (Model, Cmd Msg)
 checkPairing pos pos' model = 
@@ -291,15 +316,18 @@ checkPairing pos pos' model =
         Just path ->
             let msg = always <| Paired model.clicked
                 newBoard = resetTiles model.tiles model.clicked
+                hint = findPair model newBoard
             -- in flip update model <| msg ()
-            in if Dict.isEmpty newBoard || hasPairs model newBoard
-               then ( { model | path = path }
+            in if Dict.isEmpty newBoard || hint /= Nothing
+               then ( { model
+                          | path = path
+                          , hint = Maybe.withDefault [] hint }
                     , Task.perform msg msg
                         <| Process.sleep
                         <| 0.3 * Time.second
                     )
                else ( model
-                    , runGenerator ShuffleBoard
+                    , runGenerator UpdateBoard
                         <| shuffle
                         <| Dict.values newBoard
                     )
@@ -391,15 +419,16 @@ symbols = 16
 
 themePicker : Model -> Int -> (String, String) -> List (Html Msg)
 themePicker model n ( theme, _ ) =
-    let link = Html.a [ Html.href "javascript:void()"
-                      , Html.style [ ( "padding", "0 20px" )
-                                   , ( "text-align", "center" ) ]
-                      , onClick <| ChangeTheme <| theme
-                      ] [ Html.text
-                          <| Maybe.withDefault ""
-                          <| Dict.get theme
-                          <| model.i18n.translations.themes
-                        ]
+    let tag = if theme == fst model.theme then Html.span else Html.a
+        link = tag [ Html.href "javascript:void()"
+                   , Html.style [ ( "padding", "0 20px" )
+                                , ( "text-align", "center" ) ]
+                   , onClick <| ChangeTheme <| theme
+                   ] [ Html.text
+                       <| Maybe.withDefault ""
+                       <| Dict.get theme
+                       <| model.i18n.translations.themes
+                     ]
     in if n == 0
        then [ link ]
        else [ Html.text "|", link ]
