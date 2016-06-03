@@ -177,17 +177,25 @@ subscriptions model = Sub.none
 
 view : Model -> Html Msg
 view model =
-    let w = toString ((model.config.cols + 2) * 80) ++ "px"
-        h = toString ((model.config.rows + 2) * 105) ++ "px"
+    let config = model.config
+        w = toString ((config.cols + 2) * (config.tileWidth + 5)) ++ "px"
+        h = toString ((config.rows + 2) * (config.tileHeight + 5)
+                      + config.topPadding) ++ "px"
         styles = [ ( "width", w )
                  , ( "height", h )
                  , ( "top", "0" )
                  , ( "left", "0" )
                  , ( "position", "absolute" )
                  ]
-    in div [ style styles ]
+    in div [ style [ ( "display", "flex" )
+                   , ( "width", "100%" )
+                   ]
+           ]
         <| if Dict.isEmpty model.board
-           then [ h1 [ style [ ( "text-align", "center" ) ] ]
+           then [ h1 [ style [ ( "text-align", "center" )
+                             , ( "vertical-align", "center" )
+                             , ( "margin", "auto" )
+                             ] ]
                   <| [ text <| if model.level == Array.length levels - 1
                                then model.i18n.translations.allClear 
                                else model.i18n.translations.levelClear
@@ -229,7 +237,7 @@ view model =
                , svg [ style <| ( "z-index", "0" ) :: styles ]
                    <| if model.clicked == []
                       then []
-                      else showPath model.config model.path
+                      else showPath config model.path
                ]
 
 runGenerator : (a -> msg) -> Random.Generator a -> Cmd msg
@@ -529,7 +537,7 @@ config = { rows = 8
          , cols = 12
          , tileWidth = 50
          , tileHeight = 50
-         , topPadding = 50
+         , topPadding = 60
          }
 
 levels : Array.Array HoleFiller
