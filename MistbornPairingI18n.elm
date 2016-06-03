@@ -1,6 +1,7 @@
 module MistbornPairingI18n exposing ( Model, Msg(..), init, update, view )
 
 import Array
+import Debug
 import Dict
 import Json.Decode exposing (..)
 import Html exposing (..)
@@ -15,6 +16,8 @@ import Time
 import Task
 
 type alias Translations = { backButton : String
+                          , levelClear : String
+                          , allClear : String
                           , symbolIntro : Array.Array String
                           , themes : Dict.Dict String String
                           }
@@ -29,6 +32,8 @@ type Msg = Fetch String
 init : String -> (Model, Cmd Msg)
 init lang = ( { lang = lang
               , translations = { backButton = "<<"
+                               , levelClear = ""
+                               , allClear = ""
                                , symbolIntro = Array.empty
                                , themes = Dict.empty
                                }
@@ -59,8 +64,10 @@ fetch : String -> Cmd Msg
 fetch lang = let lang' = fst <| findLanguage lang
              in Task.perform (FetchFail lang') FetchSucceed
                 <| flip Http.get ("mistborn-pairing." ++ lang' ++ ".json")
-                <| object3 Translations
+                <| object5 Translations
                     ("backButton" := string)
+                    ("levelClear" := string)
+                    ("allClear" := string)
                     ("symbolIntro" := array string)
                     ("themes" := dict string)
 

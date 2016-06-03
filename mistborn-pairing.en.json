@@ -1,4 +1,6 @@
 { "backButton": "<< Back to List"
+  , "levelClear": "Level Clear, Next Level in 3 Seconds..."
+  , "allClear": "All Levels Clear, You're So Good!"
   , "themes" : { "plain": "Plain"
                 , "lien": "LiEN²"
               }
