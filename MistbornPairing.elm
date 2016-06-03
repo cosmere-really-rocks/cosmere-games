@@ -112,7 +112,10 @@ update msg model =
                                then ( setClicked model, Cmd.none )
                                else
                                    checkPairing pos pos'
-                                   <| { model | clicked = [ pos, pos' ] }
+                                   <| { model
+                                          | clicked = [ pos, pos' ]
+                                          , hinted = False
+                                      }
                    _ -> let newBoard = if model.hinted
                                        then model.tiles
                                        else resetTiles model.tiles model.clicked
