@@ -42,6 +42,7 @@ type alias Model = { rows : Int
                    , cols : Int
                    , tileWidth: Int
                    , tileHeight: Int
+                   , topPadding : Int
                    , tiles : Tiles
                    , hoverAt : Maybe TilePos
                    , clicked : List TilePos
@@ -65,10 +66,11 @@ urlParser : Navigation.Parser Params
 urlParser = Navigation.makeParser fromUrl
 
 init : Params -> (Model, Cmd Msg)
-init params = let r = 6
-                  c = 12
-                  w = 75
-                  h = 100
+init params = let r = 9
+                  c = 18
+                  w = 50
+                  h = 65
+                  p = 50
                   ( model', cmd' ) = I18n.init params.lang
                   xs = List.concat <| List.repeat r [ 1 .. c ]
                   ys = List.concatMap (List.repeat c) [ 1 .. r ]
@@ -78,6 +80,7 @@ init params = let r = 6
                    , cols = c
                    , tileWidth = w
                    , tileHeight = h
+                   , topPadding = p
                    , tiles = board
                    , hoverAt = Nothing
                    , clicked = []
@@ -295,7 +298,9 @@ showTile model ( pos, t ) =
                          ++ "." ++ snd (model.theme))
                   , Html.style [ ( "width", width )
                                , ( "height", height )
-                               , ( "top", toSize <| y * (model.tileHeight + 5) )
+                               , ( "top"
+                                 , toSize <| (y * (model.tileHeight + 5)
+                                              + model.topPadding) )
                                , ( "left", toSize <| x * (model.tileWidth + 5) )
                                , ( "position", "absolute" )
                                , ( "border", border )
