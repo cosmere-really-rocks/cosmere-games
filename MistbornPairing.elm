@@ -7,6 +7,7 @@ import Html exposing (Html, a, div, h1, h3, img, span, text)
 import Html.App as Html
 import Html.Attributes as Html exposing (href, src, style)
 import Html.Events exposing (..)
+import Json.Decode as Json exposing ((:=))
 import List
 import List.Extra as List
 import List.Split as List
@@ -25,7 +26,7 @@ import Task
 import Time
 import UrlParser exposing ((</>))
 
-import MistbornPairingI18n as I18n
+import I18n
 
 main = Navigation.program urlParser { init = init
                                     , view = view
@@ -47,6 +48,13 @@ type alias Config = { rows : Int
                     }       
 type alias HoleFiller = Config -> Board -> TilePos -> Maybe TilePos
 type alias Params = { lang : String, theme : String, level : Int }
+
+type alias Translations = { backButton : String
+                          , levelClear : String
+                          , allClear : String
+                          , symbolIntro : Array.Array String
+                          , themes : Dict.Dict String String
+                          }
     
 type alias Model = { config : Config
                    , level : Int
@@ -58,7 +66,7 @@ type alias Model = { config : Config
                    , hint : List TilePos
                    , hinted : Bool
                    , theme : (String, String)
-                   , i18n : I18n.Model
+                   , i18n : I18n.Model Translations
                    }
 
 type Msg = LevelUp
@@ -69,13 +77,15 @@ type Msg = LevelUp
          | Paired (List TilePos)
          | Hint
          | ChangeTheme String
-         | OnI18n I18n.Msg
+         | OnI18n (I18n.Msg Translations)
 
 urlParser : Navigation.Parser Params
 urlParser = Navigation.makeParser fromUrl
 
 init : Params -> (Model, Cmd Msg)
-init params = let ( model', cmd' ) = I18n.init params.lang
+init params = let ( model', cmd' ) =
+                      I18n.init languages i18nUrlBuilder i18nDefaultTranslations
+                          i18nDecoder params.lang
                   r = config.rows
                   c = config.cols
                   xs = List.concat <| List.repeat r [ 1 .. c ]
@@ -178,6 +188,7 @@ subscriptions model = Sub.none
 view : Model -> Html Msg
 view model =
     let config = model.config
+        translations = model.i18n.translations
         w = toString ((config.cols + 2) * (config.tileWidth + 5)) ++ "px"
         h = toString ((config.rows + 2) * (config.tileHeight + 5)
                       + config.topPadding) ++ "px"
@@ -197,8 +208,8 @@ view model =
                              , ( "margin", "auto" )
                              ] ]
                   <| [ text <| if model.level == Array.length levels - 1
-                               then model.i18n.translations.allClear 
-                               else model.i18n.translations.levelClear
+                               then translations.allClear 
+                               else translations.levelClear
                      ]
                 ]
            else 
@@ -207,7 +218,11 @@ view model =
                              , ( "width", "100%" )
                              ]
                      ]
-                     [ Html.map OnI18n <| I18n.view model.i18n
+                     [ div [] [ a [ href "index.html"
+                                  , style [ ( "padding", "0 20px" ) ]
+                                  ] [ text translations.backButton ]
+                              , Html.map OnI18n <| I18n.view model.i18n
+                              ]
                      , div [ style [ ( "width", "100%" ) ] ]
                          <| img [ src "hint.png"
                                 , style [ ( "width", "30px" )
@@ -220,12 +235,12 @@ view model =
                      , h3 [ style [ ( "color", "blue" )
                                   , ( "text-align", "center" )
                                   ]
-                          ] [ let intro = model.i18n.translations.symbolIntro
+                          ] [ let intro = translations.symbolIntro
                               in text
                                   <| Maybe.withDefault ""
-                                  <| model.hoverAt
+                                  <| (model.hoverAt
                                       `Maybe.andThen` (flip Array.get intro
-                                                       << getTile model.board)
+                                                       << getTile model.board))
                             ]
                      ]
                , div [ style <| styles ++ [ ( "z-index", "10" )
@@ -539,6 +554,30 @@ config = { rows = 8
          , tileHeight = 50
          , topPadding = 60
          }
+
+languages : List (String, String)
+languages = [ ( "en", "English" )
+            , ( "zh", "中文" )
+            ]
+
+i18nUrlBuilder : String -> String
+i18nUrlBuilder lang = "mistborn-pairing." ++ lang ++ ".json"
+
+i18nDecoder : Json.Decoder Translations
+i18nDecoder = Json.object5 Translations
+              ("backButton" := Json.string)
+              ("levelClear" := Json.string)
+              ("allClear" := Json.string)
+              ("symbolIntro" := Json.array Json.string)
+              ("themes" := Json.dict Json.string)
+
+i18nDefaultTranslations : Translations
+i18nDefaultTranslations = { backButton = "<<"
+                          , levelClear = ""
+                          , allClear = ""
+                          , symbolIntro = Array.empty
+                          , themes = Dict.empty
+                          }
 
 levels : Array.Array HoleFiller
 levels = Array.fromList [ stasis
