@@ -1,6 +1,7 @@
 { "backButton": "<< Back to List"
-  , "levelClear": "Level Clear, Next Level in 3 Seconds..."
-  , "allClear": "All Levels Clear, You're So Good!"
+  , "levelClear": "Level Clear, Next Level in 3 Seconds. Current Score: "
+  , "allClear": "All Levels Clear, You're So Good! Your Score: "
+  , "gameOver": "Time Is Up. Your Score: "
   , "themes" : { "plain": "Plain"
                 , "lien": "LiEN²"
               }
