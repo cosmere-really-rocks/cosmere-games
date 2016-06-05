@@ -1,11 +1,11 @@
-module MistbornPairing exposing ( main, init, update, view )
+module MistbornPairing exposing ( main )
 
 import Array
 import Debug
 import Dict
 import Html exposing (Html, a, div, h1, h3, img, span, text)
 import Html.App as Html
-import Html.Attributes as Html exposing (href, src, style)
+import Html.Attributes exposing (href, src, style)
 import Html.Events exposing (..)
 import Json.Decode as Json exposing ((:=))
 import List
@@ -13,7 +13,8 @@ import List.Extra as List
 import List.Split as List
 import Maybe
 import Navigation
-import Platform.Cmd as Platform
+import Platform.Cmd as Cmd
+import Platform.Sub as Sub
 import Process
 import Random as Rand
 import Random.Pcg as Random
@@ -26,9 +27,10 @@ import Task
 import Time
 import UrlParser exposing ((</>))
 
+import CountDownBar as Bar
 import I18n
 
-main = Navigation.program urlParser { init = init
+main = Navigation.program urlParser { init = init 0
                                     , view = view
                                     , update = update
                                     , urlUpdate = urlUpdate
@@ -46,27 +48,29 @@ type alias Config = { rows : Int
                     , tileHeight: Int
                     , topPadding : Int
                     }       
-type alias HoleFiller = Config -> Board -> TilePos -> Maybe TilePos
+type alias HoleFiller = Board -> TilePos -> Maybe TilePos
 type alias Params = { lang : String, theme : String, level : Int }
 
 type alias Translations = { backButton : String
                           , levelClear : String
                           , allClear : String
+                          , gameOver : String
                           , symbolIntro : Array.Array String
                           , themes : Dict.Dict String String
                           }
     
-type alias Model = { config : Config
-                   , level : Int
+type alias Model = { level : Int
                    , holeFiller : HoleFiller
                    , board : Board
                    , hoverAt : Maybe TilePos
                    , clicked : List TilePos
                    , path : List TilePos
+                   , score : Int
                    , hint : List TilePos
                    , hinted : Bool
                    , theme : (String, String)
                    , i18n : I18n.Model Translations
+                   , bar : Bar.Model
                    }
 
 type Msg = LevelUp
@@ -78,40 +82,48 @@ type Msg = LevelUp
          | Hint
          | ChangeTheme String
          | OnI18n (I18n.Msg Translations)
+         | OnCountDown Bar.Msg
 
 urlParser : Navigation.Parser Params
-urlParser = Navigation.makeParser fromUrl
+urlParser = Navigation.makeParser <| fromUrl << .hash
 
-init : Params -> (Model, Cmd Msg)
-init params = let ( model', cmd' ) =
-                      I18n.init languages i18nUrlBuilder i18nDefaultTranslations
-                          i18nDecoder params.lang
-                  r = config.rows
-                  c = config.cols
-                  xs = List.concat <| List.repeat r [ 1 .. c ]
-                  ys = List.concatMap (List.repeat c) [ 1 .. r ]
-                  board = Dict.fromList
-                          <| List.map2 (\x y -> ( ( x, y ), -1 )) xs ys 
-              in ( { config = config
-                   , level = params.level
-                   , holeFiller = Maybe.withDefault stasis
-                                  <| Array.get params.level levels
-                   , board = board
-                   , hoverAt = Nothing
-                   , clicked = []
-                   , path = []
-                   , hint = []
-                   , hinted = False
-                   , theme = findTheme params.theme
-                   , i18n = model'
-                   }
-                 , Platform.batch [ runGenerator UpdateBoard
-                                        <| (Random.list (r * c // 2)
-                                            <| Random.int 0 <| symbols - 1)
-                                            `Random.andThen` generateBoard board
-                                  , Platform.map OnI18n cmd'
-                                  ]
-                 )
+init : Int -> Params -> (Model, Cmd Msg)
+init score params =
+    let ( m', c' ) = I18n.init languages i18nUrlBuilder i18nDefaultTranslations
+                     i18nDecoder params.lang
+        ( m'', c'' ) = Bar.init [ ( "width", "500px" )
+                                , ( "height", "30px" )
+                                , ( "border", "solid 1px black" )
+                                , ( "border-radius", "3px" )
+                                ] (100 * Time.millisecond) 3000 -- 300s
+        r = config.rows
+        c = config.cols
+        xs = List.concat <| List.repeat r [ 1 .. c ]
+        ys = List.concatMap (List.repeat c) [ 1 .. r ]
+        board = Dict.fromList <| List.map2 (\x y -> ( ( x, y ), -1 )) xs ys 
+    in ( { level = params.level
+         , holeFiller = Maybe.withDefault stasis
+                        <| Array.get params.level levels
+         , board = board
+         , hoverAt = Nothing
+         , clicked = []
+         , path = []
+         , score = score
+         , hint = []
+         , hinted = False
+         , theme = findTheme params.theme
+         , i18n = m'
+         , bar = m''
+         }
+       , Cmd.batch [ runGenerator UpdateBoard
+                         <| (Random.list (r * c // 2)
+                             <| Random.int 0 <| symbols - 1)
+                             `Random.andThen` generateBoard board
+                   , Cmd.batch [ Cmd.map OnI18n c'
+                               , Cmd.map OnCountDown c''
+                               ]
+                   ]
+       )
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -150,7 +162,7 @@ update msg model =
                         else let ( m, c ) = update (Paired model.clicked) model
                              in ( setClicked m, c )
         Paired clicked ->
-            if model.clicked /= clicked
+            if Bar.isTimedOut model.bar ||  model.clicked /= clicked
             then ( model, Cmd.none )
             else flip update model
                 <| UpdateBoard
@@ -169,26 +181,30 @@ update msg model =
             let ( m, c ) = I18n.update i18n model.i18n
                 model' = { model | i18n = m }
             in ( model'
-               , Platform.batch [ Platform.map OnI18n c
-                                , updateUrl model' <| fst model'.theme ]
+               , Cmd.batch [ Cmd.map OnI18n c
+                           , updateUrl model' <| fst model'.theme
+                           ]
                )
+        OnCountDown bar ->
+            let ( m, c ) = Bar.update bar model.bar
+                model' = { model | bar = m }
+            in ( model', Cmd.map OnCountDown c )
 
 urlUpdate : Params -> Model -> (Model, Cmd Msg)
 urlUpdate params model =
     if params.level /= model.level
-    then init params
+    then init model.score params
     else let ( m, c ) = if params.lang == model.i18n.lang
                         then ( model, Cmd.none )
                         else update (OnI18n <| I18n.Fetch params.lang) model
          in ( { m | theme = findTheme params.theme }, c )
               
 subscriptions : Model -> Sub Msg
-subscriptions model = Sub.none
+subscriptions model = Sub.map OnCountDown <| Bar.subscriptions model.bar
 
 view : Model -> Html Msg
 view model =
-    let config = model.config
-        translations = model.i18n.translations
+    let translations = model.i18n.translations
         w = toString ((config.cols + 2) * (config.tileWidth + 5)) ++ "px"
         h = toString ((config.rows + 2) * (config.tileHeight + 5)
                       + config.topPadding) ++ "px"
@@ -202,18 +218,21 @@ view model =
                    , ( "width", "100%" )
                    ]
            ]
-        <| if Dict.isEmpty model.board
+        <| if Dict.isEmpty model.board || Bar.isTimedOut model.bar
            then [ h1 [ style [ ( "text-align", "center" )
                              , ( "vertical-align", "center" )
                              , ( "margin", "auto" )
                              ] ]
-                  <| [ text <| if model.level == Array.length levels - 1
-                               then translations.allClear 
-                               else translations.levelClear
+                  <| [ text
+                           <| (if Bar.isTimedOut model.bar
+                               then translations.gameOver
+                               else if model.level == Array.length levels - 1
+                                    then translations.allClear 
+                                    else translations.levelClear)
+                               ++ toString model.score
                      ]
                 ]
-           else 
-               [ div [ style [ ("z-index", "100" )
+           else [ div [ style [ ("z-index", "100" )
                              , ( "position", "absolute" )
                              , ( "width", "100%" )
                              ]
@@ -222,6 +241,7 @@ view model =
                                   , style [ ( "padding", "0 20px" ) ]
                                   ] [ text translations.backButton ]
                               , Html.map OnI18n <| I18n.view model.i18n
+                              , Html.map OnCountDown <| Bar.view model.bar
                               ]
                      , div [ style [ ( "width", "100%" ) ] ]
                          <| img [ src "hint.png"
@@ -284,7 +304,7 @@ generateBoard board halfTiles =
 
 updateBoard : Model -> (Model, Cmd Msg)
 updateBoard model =
-    let board' = fillHoles model.holeFiller model.config model.board
+    let board' = fillHoles model.holeFiller model.board
                  <| model.clicked
         model' = { model
                      | clicked = []
@@ -292,12 +312,14 @@ updateBoard model =
                      , hinted = False
                      , board = board'
                  }
-        hint = findPair model.config board'
+        hint = findPair board'
     in if Dict.isEmpty board'
-       then if model.level == Array.length levels - 1
-            then ( model, Cmd.none )
+       then let levelScore = model.bar.ticksLeft * (10 + model.level)
+                model' = { model | score = model.score + levelScore }
+            in if model.level == Array.length levels - 1
+            then ( model', Cmd.none )
             else let msg = always LevelUp
-                 in ( model
+                 in ( model'
                     , Task.perform msg msg <| Process.sleep <| 3 * Time.second
                     )
        else case  hint of
@@ -309,20 +331,20 @@ updateBoard model =
                          <| Dict.values board'
                      )
 
-fillHoles : HoleFiller -> Config -> Board -> List TilePos -> Board
-fillHoles filler config board poses =
+fillHoles : HoleFiller -> Board -> List TilePos -> Board
+fillHoles filler board poses =
     if poses == []
     then board
     else let ( board', poses' ) =
              List.foldl (\pos ( board, poses ) ->
-                             case filler config board pos of
+                             case filler board pos of
                                  Just pos' ->
                                      ( Dict.insert pos (getTile board pos')
                                        <| Dict.remove pos' board
                                      , pos' :: poses
                                      )
                                  _ -> ( board, poses )) ( board, [] ) poses
-         in fillHoles filler config board' poses'
+         in fillHoles filler board' poses'
            
 showPath : Config -> List TilePos -> List (Html Msg)
 showPath config path =
@@ -351,7 +373,6 @@ showTile model ( pos, t ) =
                       then "inset 3px blue"
                       else "solid 1px black"
         toSize = (<|) toString >> (flip (++) "px")
-        config = model.config
         delta = if isClicked || isHoverAt then 5 else 0
         width = toSize <| config.tileWidth - delta
         height = toSize <| config.tileHeight - delta
@@ -375,13 +396,13 @@ showTile model ( pos, t ) =
                   ] []
             ]
 
-findPair : Config -> Board -> Maybe (List TilePos)
-findPair config board =
+findPair : Board -> Maybe (List TilePos)
+findPair board =
     let syms = [ 0 .. symbols - 1 ]
         posesOf sym = Dict.toList board
                     |> List.filter ((==) sym << snd)
                     |> List.map fst
-        check pos pos' = checkPairing' config board pos pos'
+        check pos pos' = checkPairing' board pos pos'
         checkPoses poses =
             case poses of
                 []  -> Nothing
@@ -392,18 +413,21 @@ findPair config board =
         
 checkPairing : TilePos -> TilePos -> Model -> (Model, Cmd Msg)
 checkPairing pos pos' model = 
-    case checkPairing' model.config model.board pos pos' of
+    case checkPairing' model.board pos pos' of
         Just path ->
             let msg = always <| Paired model.clicked
             -- in flip update model <| msg ()
-            in ( { model | path = path }
+            in ( { model
+                     | path = path
+                     -- 10 points for each tile cleared
+                     , score = model.score + (10 + model.level) * 2 }
                , Task.perform msg msg <| Process.sleep <| 0.3 * Time.second
                )
         Nothing ->
             ( { model | clicked = [] }, Cmd.none )
 
-checkPairing' : Config -> Board -> TilePos -> TilePos -> Maybe (List TilePos)
-checkPairing' config board pos pos' =
+checkPairing' :  Board -> TilePos -> TilePos -> Maybe (List TilePos)
+checkPairing' board pos pos' =
     let flipTuple = uncurry <| flip (,)
         dimSum = config.rows + config.cols
         checkPath lastPass makeCoord dim pos pos' =
@@ -541,18 +565,17 @@ levelParser = (UrlParser.s "level" </> UrlParser.int) --<?> 0
 --         Result.withDefault ( chunks, formatter default )
 --             <| parser chunks formatter
               
-fromUrl : Navigation.Location -> Params
+fromUrl : String -> Params
 fromUrl = Result.withDefault { lang = "zh", theme = "plain", level = 0 }
           << UrlParser.parse Params (langParser </> themeParser </> levelParser)
           << String.dropLeft 2
-          << .hash
 
 config : Config
 config = { rows = 8
          , cols = 12
          , tileWidth = 50
          , tileHeight = 50
-         , topPadding = 60
+         , topPadding = 100
          }
 
 languages : List (String, String)
@@ -564,10 +587,11 @@ i18nUrlBuilder : String -> String
 i18nUrlBuilder lang = "mistborn-pairing." ++ lang ++ ".json"
 
 i18nDecoder : Json.Decoder Translations
-i18nDecoder = Json.object5 Translations
+i18nDecoder = Json.object6 Translations
               ("backButton" := Json.string)
               ("levelClear" := Json.string)
               ("allClear" := Json.string)
+              ("gameOver" := Json.string)
               ("symbolIntro" := Json.array Json.string)
               ("themes" := Json.dict Json.string)
 
@@ -575,6 +599,7 @@ i18nDefaultTranslations : Translations
 i18nDefaultTranslations = { backButton = "<<"
                           , levelClear = ""
                           , allClear = ""
+                          , gameOver = ""
                           , symbolIntro = Array.empty
                           , themes = Dict.empty
                           }
@@ -583,29 +608,37 @@ levels : Array.Array HoleFiller
 levels = Array.fromList [ stasis
                         , gravity
                         , rocket
-                        , leftLashing
-                        , rightLashing
+                        , lashLeft
+                        , lashRight
+                        , plowDown
+                        , plowUp
+                        , plowLeft
+                        , plowRight
+                        , bite
+                        , jawOpener
+                        , symplegades
+                        , ripper
                         ]
     
 stasis : HoleFiller
-stasis _ _ _ = Nothing
+stasis _ _ = Nothing
 
-lashing : (TilePos -> Int) -> (Int -> TilePos) -> (Config -> Int -> List Int)
+lashing : (TilePos -> Int) -> (Int -> TilePos) -> (Int -> List Int)
         -> HoleFiller
-lashing pickCoord makeCoord surge config board coord =
+lashing pickCoord makeCoord surge board coord =
     let y = pickCoord coord
-        ys = surge config y
+        ys = surge y
     in Maybe.map (makeCoord << fst)
         <| List.find ((/=) Nothing << snd)
         <| List.zip ys
         <| flip List.map ys
         <| (flip Dict.get board << makeCoord)
 
-downSurge : Config -> Int -> List Int
-downSurge _ y = flip List.map [ 1 .. y - 1 ] <| (-) y
+downSurge : Int -> Int -> List Int
+downSurge range y = flip List.map [ 1 .. y - range ] <| (-) y
             
-upSurge : (Config -> Int) -> Config -> Int -> List Int
-upSurge field config y = flip List.map [ 1 .. field config - y ] <| (+) y
+upSurge : Int -> Int -> List Int
+upSurge range y = flip List.map [ 1 .. range - y ] <| (+) y
 
 addX : TilePos -> Int -> TilePos
 addX ( x, _ ) = (,) x
@@ -613,16 +646,72 @@ addX ( x, _ ) = (,) x
 addY : TilePos -> Int -> TilePos
 addY ( _, y ) = flip (,) y
             
+gravity' : Int -> HoleFiller
+gravity' range board pos = lashing snd (addX pos) (downSurge range) board pos
+
+rocket' : Int -> HoleFiller
+rocket' range board pos = lashing snd (addX pos) (upSurge range) board pos
+
+lashLeft' : Int -> HoleFiller
+lashLeft' range board pos = lashing fst (addY pos) (upSurge range) board pos
+
+lashRight' : Int -> HoleFiller
+lashRight' range board pos = lashing fst (addY pos) (downSurge range) board pos
+
 gravity : HoleFiller
-gravity config board pos = lashing snd (addX pos) downSurge config board pos
-
+gravity = gravity' 1
+          
 rocket : HoleFiller
-rocket config board pos =
-    lashing snd (addX pos) (upSurge .rows) config board pos
+rocket = rocket' config.rows
 
-leftLashing : HoleFiller
-leftLashing config board pos = lashing fst (addY pos) downSurge config board pos
+lashLeft : HoleFiller
+lashLeft = lashLeft' config.cols
 
-rightLashing : HoleFiller
-rightLashing config board pos =
-    lashing fst (addY pos) (upSurge .cols) config board pos
+lashRight : HoleFiller
+lashRight = lashRight' 1
+
+fancyFiller : (TilePos -> HoleFiller) -> HoleFiller
+fancyFiller picker board pos = (picker pos) board pos
+    
+plowDown : HoleFiller
+plowDown = fancyFiller <| \( x, _ ) -> if x % 2 == 0 then gravity else rocket
+
+plowUp : HoleFiller
+plowUp = fancyFiller <| \( x, _ ) -> if x % 2 /= 0 then gravity else rocket
+
+plowLeft : HoleFiller
+plowLeft = fancyFiller <| \( _, y ) -> if y % 2 == 0
+                                       then lashLeft
+                                       else lashRight
+
+plowRight : HoleFiller
+plowRight = fancyFiller <| \( _, y ) -> if y % 2 /= 0
+                                        then lashRight
+                                        else lashLeft
+
+bite : HoleFiller
+bite = fancyFiller <| \( _, y ) -> if y <= config.rows // 2
+                                          then gravity
+                                          else rocket
+
+jawOpener : HoleFiller
+jawOpener = fancyFiller <| \( _, y ) -> let middle = config.rows // 2
+                                        in if y == middle || y == middle + 1
+                                           then stasis
+                                           else if y > middle + 1
+                                                then gravity' <| middle + 1
+                                                else rocket' middle
+
+-- the clashing rocks
+symplegades : HoleFiller
+symplegades = fancyFiller <| \( x, _ ) -> if x <= config.cols // 2
+                                          then lashRight
+                                          else lashLeft
+                                                     
+ripper : HoleFiller
+ripper = fancyFiller <| \( x, _ ) -> let middle = config.cols // 2
+                                     in if x == middle || x == middle + 1
+                                        then stasis
+                                        else if x > middle + 1
+                                             then lashRight' <| middle + 1
+                                             else lashLeft' <| middle
